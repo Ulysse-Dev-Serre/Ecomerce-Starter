@@ -1,5 +1,7 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
 
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
