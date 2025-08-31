@@ -1,0 +1,253 @@
+### E-commerce Starter API Tests
+### Documentation: http://localhost:3000/docs
+
+# Variables globales
+@baseUrl = http://localhost:3001/api
+@testUserId = cmf03lyk50001ksfqur046yqg
+@testVariantId = cmf03bww50008ksfsjjm4mfxj
+@testVariantId2 = cmf03bww5000aksfshvhagj6x
+
+###
+# 🧪 STEP 1: Créer des données de test
+POST {{baseUrl}}/test-data
+Content-Type: application/json
+
+###
+# 👤 USERS - Créer un utilisateur
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "name": "John Doe",
+  "role": "CLIENT"
+}
+
+###
+# 👤 USERS - Récupérer un utilisateur (remplacez l'ID)
+GET {{baseUrl}}/users/{{testUserId}}
+
+###
+# 👤 USERS - Modifier un utilisateur
+PUT {{baseUrl}}/users/{{testUserId}}
+Content-Type: application/json
+
+{
+  "name": "John Smith",
+  "email": "john.smith@example.com"
+}
+
+###
+# 🏠 ADDRESSES - Ajouter une adresse
+POST {{baseUrl}}/users/{{testUserId}}/addresses
+Content-Type: application/json
+
+{
+  "street": "456 Boulevard Saint-Laurent",
+  "city": "Montréal",
+  "state": "QC",
+  "zipCode": "H2X 2T1",
+  "country": "CA",
+  "type": "SHIPPING",
+  "isDefault": true
+}
+
+###
+# 📂 CATEGORIES - Liste des catégories (EN)
+GET {{baseUrl}}/categories?language=EN
+
+###
+# 📂 CATEGORIES - Liste des catégories (FR)
+GET {{baseUrl}}/categories?language=FR
+
+###
+# 📂 CATEGORIES - Catégorie par slug (EN)
+GET {{baseUrl}}/categories/electronics?language=EN
+
+###
+# 📂 CATEGORIES - Catégorie par slug (FR)
+GET {{baseUrl}}/categories/electronics?language=FR
+
+###
+# 🛍️ PRODUCTS - Liste des produits (EN)
+GET {{baseUrl}}/products?language=EN
+
+###
+# 🛍️ PRODUCTS - Liste des produits (FR)
+GET {{baseUrl}}/products?language=FR
+
+###
+# 🛍️ PRODUCTS - Recherche de produits
+GET {{baseUrl}}/products?search=iPhone&language=FR
+
+###
+# 🛍️ PRODUCTS - Produit par slug (EN)
+GET {{baseUrl}}/products/iphone-15?language=EN
+
+###
+# 🛍️ PRODUCTS - Produit par slug (FR)
+GET {{baseUrl}}/products/iphone-15?language=FR
+
+###
+# 🛒 CART - Récupérer le panier
+GET {{baseUrl}}/cart/{{testUserId}}
+
+###
+# 🛒 CART - Ajouter au panier (utilisez l'ID de variante des données de test)
+POST {{baseUrl}}/cart/{{testUserId}}
+Content-Type: application/json
+
+{
+  "variantId": "{{testVariantId}}",
+  "quantity": 2
+}
+
+###
+# 🛒 CART - Ajouter un autre produit au panier
+POST {{baseUrl}}/cart/{{testUserId}}
+Content-Type: application/json
+
+{
+  "variantId": "cm5var789",
+  "quantity": 1
+}
+
+###
+# 📦 ORDERS - Créer une commande depuis le panier
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "userId": "{{testUserId}}",
+  "shippingAddress": {
+    "street": "123 Rue Test",
+    "city": "Montréal", 
+    "state": "QC",
+    "zipCode": "H3B 1A1",
+    "country": "CA"
+  },
+  "billingAddress": {
+    "street": "123 Rue Test",
+    "city": "Montréal",
+    "state": "QC", 
+    "zipCode": "H3B 1A1",
+    "country": "CA"
+  }
+}
+
+###
+# 📦 ORDERS - Récupérer une commande (remplacez l'ID)
+@testOrderId = cm5order123
+GET {{baseUrl}}/orders/{{testOrderId}}
+
+###
+# 📦 ORDERS - Modifier le statut d'une commande
+PATCH {{baseUrl}}/orders/{{testOrderId}}
+Content-Type: application/json
+
+{
+  "status": "PAID"
+}
+
+###
+# 📋 USER ORDERS - Commandes d'un utilisateur
+GET {{baseUrl}}/users/{{testUserId}}/orders
+
+###
+# 📋 USER ORDERS - Commandes d'un utilisateur avec pagination
+GET {{baseUrl}}/users/{{testUserId}}/orders?limit=5&offset=0
+
+###
+# ❌ TESTS D'ERREUR - Utilisateur inexistant
+GET {{baseUrl}}/users/inexistant-id
+
+###
+# ❌ TESTS D'ERREUR - Produit inexistant
+GET {{baseUrl}}/products/produit-inexistant
+
+###
+# ❌ TESTS D'ERREUR - Ajouter au panier sans variantId
+POST {{baseUrl}}/cart/{{testUserId}}
+Content-Type: application/json
+
+{
+  "quantity": 2
+}
+
+###
+# ❌ TESTS D'ERREUR - Quantité négative
+POST {{baseUrl}}/cart/{{testUserId}}
+Content-Type: application/json
+
+{
+  "variantId": "{{testVariantId}}",
+  "quantity": -1
+}
+
+###
+# 🌍 TESTS MULTILINGUES - Produits en différentes langues
+GET {{baseUrl}}/products?language=ES
+
+###
+GET {{baseUrl}}/products?language=DE
+
+###
+GET {{baseUrl}}/products?language=IT
+
+###
+# 🔍 TESTS DE RECHERCHE - Différents termes
+GET {{baseUrl}}/products?search=phone&language=EN
+
+###
+GET {{baseUrl}}/products?search=téléphone&language=FR
+
+###
+# 📊 WORKFLOW COMPLET E-COMMERCE
+# 1. Créer utilisateur → 2. Ajouter au panier → 3. Créer commande
+
+# Étape 1: Créer utilisateur
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "email": "workflow@test.com",
+  "name": "Workflow Test"
+}
+
+### 
+# Étape 2: Ajouter des produits au panier (utilisez l'ID utilisateur créé)
+@workflowUserId = REMPLACER_PAR_ID_UTILISATEUR_CREE
+POST {{baseUrl}}/cart/{{workflowUserId}}
+Content-Type: application/json
+
+{
+  "variantId": "REMPLACER_PAR_ID_VARIANTE",
+  "quantity": 1
+}
+
+###
+# Étape 3: Vérifier le panier
+GET {{baseUrl}}/cart/{{workflowUserId}}
+
+###
+# Étape 4: Créer la commande
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "userId": "{{workflowUserId}}",
+  "shippingAddress": {
+    "street": "789 Test Avenue",
+    "city": "Québec",
+    "state": "QC",
+    "zipCode": "G1K 3X1", 
+    "country": "CA"
+  },
+  "billingAddress": {
+    "street": "789 Test Avenue",
+    "city": "Québec",
+    "state": "QC",
+    "zipCode": "G1K 3X1",
+    "country": "CA"
+  }
+}

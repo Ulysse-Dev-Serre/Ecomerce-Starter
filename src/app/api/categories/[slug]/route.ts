@@ -1,0 +1,29 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getCategoryBySlug } from '../../../../lib/categories'
+import { Language } from '../../../../generated/prisma'
+
+// GET /api/categories/[slug] - Catégorie par slug avec produits
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await params
+  const { searchParams } = new URL(request.url)
+  const language = (searchParams.get('language') as Language) || Language.EN
+
+  try {
+    const result = await getCategoryBySlug(slug, language)
+    
+    if (result.error) {
+      return NextResponse.json({ error: result.error }, { status: 500 })
+    }
+
+    if (!result.data) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ data: result.data })
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
