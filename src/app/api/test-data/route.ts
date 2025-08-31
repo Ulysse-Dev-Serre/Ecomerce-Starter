@@ -1,3 +1,6 @@
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 import { db, safeDbOperation } from '../../../lib/db'
 import { ProductStatus, Language, MediaType } from '../../../generated/prisma'
