@@ -1,52 +1,19 @@
 import { db, safeDbOperation } from './db'
-import { CartStatus } from '../generated/prisma'
+import { CartStatus, Language } from '../generated/prisma'
+import { cartWithItems } from './prisma/selectors'
 
 // Get user's active cart (or create one)
-export async function getOrCreateActiveCart(userId: string) {
+export async function getOrCreateActiveCart(userId: string, language: Language = Language.FR) {
   return safeDbOperation(async () => {
     let cart = await db.cart.findFirst({
       where: { userId, status: CartStatus.ACTIVE },
-      include: { 
-        items: { 
-          include: { 
-            variant: {
-              include: {
-                product: {
-                  include: {
-                    translations: {
-                      where: { language: 'FR' }
-                    }
-                  }
-                },
-                media: true
-              }
-            }
-          } 
-        } 
-      }
+      ...cartWithItems(language)
     })
 
     if (!cart) {
       cart = await db.cart.create({
         data: { userId, status: CartStatus.ACTIVE },
-        include: { 
-          items: { 
-            include: { 
-              variant: {
-                include: {
-                  product: {
-                    include: {
-                      translations: {
-                        where: { language: 'FR' }
-                      }
-                    }
-                  },
-                  media: true
-                }
-              }
-            } 
-          } 
-        }
+        ...cartWithItems(language)
       })
     }
 
@@ -54,28 +21,36 @@ export async function getOrCreateActiveCart(userId: string) {
   })
 }
 
-// Add item to cart (handles duplicates)
+// Add item to cart (atomic upsert)
 export async function addToCart(userId: string, variantId: string, quantity = 1) {
   return safeDbOperation(async () => {
-    const { data: cart } = await getOrCreateActiveCart(userId)
-    if (!cart) throw new Error('Could not get or create cart')
+    return db.$transaction(async (tx) => {
+      // Get or create cart
+      let cart = await tx.cart.findFirst({
+        where: { userId, status: CartStatus.ACTIVE }
+      })
 
-    const existingItem = await db.cartItem.findUnique({
-      where: {
-        cartId_variantId: { cartId: cart.id, variantId }
+      if (!cart) {
+        cart = await tx.cart.create({
+          data: { userId, status: CartStatus.ACTIVE }
+        })
       }
-    })
 
-    if (existingItem) {
-      return db.cartItem.update({
-        where: { id: existingItem.id },
-        data: { quantity: existingItem.quantity + quantity }
+      // Upsert cart item (atomic - no race condition)
+      return tx.cartItem.upsert({
+        where: {
+          cartId_variantId: { cartId: cart.id, variantId }
+        },
+        update: {
+          quantity: { increment: quantity }
+        },
+        create: {
+          cartId: cart.id,
+          variantId,
+          quantity
+        }
       })
-    } else {
-      return db.cartItem.create({
-        data: { cartId: cart.id, variantId, quantity }
-      })
-    }
+    })
   })
 }
 

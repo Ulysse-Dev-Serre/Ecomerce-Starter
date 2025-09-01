@@ -1,24 +1,18 @@
-# 🚀 E-commerce Starter - Guide de démarrage rapide
+# 🚀 E-commerce Starter - Guide de démarrage
 
-## ✅ Ce qui est déjà configuré
+## ✅ Stack technique
 
-### 🗄️ Base de données PostgreSQL + Prisma
-- Schema e-commerce complet (15 modèles)
-- Support multilingue (EN/FR/ES/DE/IT)
-- Multi-devise (défaut: CAD)
-- Soft delete + contraintes métier
+### 🗄️ Backend
+- **Database** : PostgreSQL + Prisma ORM
+- **API** : Next.js App Router (REST endpoints) 
+- **Auth** : NextAuth.js (Google, Apple, Email, Password)
+- **Schema** : 15+ modèles e-commerce complets
 
-### 🔌 API REST complète  
-- **Products** : Liste, détail, recherche
-- **Categories** : Navigation par catégorie
-- **Cart** : Panier persistant
-- **Users** : Gestion utilisateurs + adresses
-- **Orders** : Conversion panier → commande
-
-### 🎨 Architecture CSS modulaire
-- ** isolé** : `/docs` page indépendante
-- **Thème personnalisable** : Variables CSS pour chaque niche
-- **Components e-commerce** : Cartes produits, panier, boutons
+### 🎨 Frontend  
+- **Framework** : Next.js 15 + React 19
+- **Styling** : TailwindCSS + variables CSS personnalisables
+- **UI** : Composants réutilisables (Navbar, Cart, Avatar)
+- **UX** : Single-page auth, toast notifications, loading states
 
 ## 🛠️ Commandes disponibles
 

@@ -1,28 +1,12 @@
 import { db, safeDbOperation } from './db'
 import { ProductStatus, Language } from '../generated/prisma'
+import { productSummary, productDetail } from './prisma/selectors'
+import { SITE_CONFIG } from './config'
 
 // Get products with translations (simplified query)
-export async function getProducts(language: Language = Language.EN) {
+export async function getProducts(language: Language = SITE_CONFIG.DEFAULT_LANGUAGE) {
   return safeDbOperation(async () => {
-    return db.product.findMany({
-      where: { 
-        status: ProductStatus.ACTIVE,
-        deletedAt: null 
-      },
-      include: {
-        translations: {
-          where: { language }
-        },
-        variants: {
-          where: { deletedAt: null },
-          include: {
-            media: {
-              where: { isPrimary: true }
-            }
-          }
-        }
-      }
-    })
+    return db.product.findMany(productSummary(language))
   })
 }
 
@@ -31,35 +15,7 @@ export async function getProductBySlug(slug: string, language: Language = Langua
   return safeDbOperation(async () => {
     return db.product.findUnique({
       where: { slug },
-      include: {
-        translations: { where: { language } },
-        categories: {
-          include: {
-            category: {
-              include: {
-                translations: { where: { language } }
-              }
-            }
-          }
-        },
-        variants: {
-          where: { deletedAt: null },
-          include: {
-            media: true,
-            attributeValues: {
-              include: {
-                attributeValue: {
-                  include: { attribute: true }
-                }
-              }
-            }
-          }
-        },
-        reviews: {
-          include: { user: { select: { name: true } } },
-          orderBy: { createdAt: 'desc' }
-        }
-      }
+      ...productDetail(language)
     })
   })
 }

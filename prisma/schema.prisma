@@ -172,6 +172,8 @@ model Category {
   translations CategoryTranslation[]
   products     ProductCategory[]
 
+  @@index([slug])
+  @@index([deletedAt])
   @@map("categories")
 }
 
@@ -203,6 +205,8 @@ model Product {
   orderItems   OrderItem[]
 
   @@index([status])
+  @@index([status, deletedAt])
+  @@index([slug])
   @@map("products")
 }
 
