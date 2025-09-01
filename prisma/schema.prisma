@@ -89,14 +89,13 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   addresses Address[]
-  sessions  Session[]
   carts     Cart[]
   orders    Order[]
   reviews   Review[]
   
   // NextAuth.js fields
   accounts Account[]
-  userSessions UserSession[]
+  sessions Session[]
 
   @@map("users")
 }
@@ -121,15 +120,7 @@ model Account {
   @@map("accounts")
 }
 
-model UserSession {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("nextauth_sessions")
-}
 
 model VerificationToken {
   identifier String
@@ -141,15 +132,15 @@ model VerificationToken {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  createdAt    DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("user_sessions")
+  @@map("sessions")
 }
 
 model Address {

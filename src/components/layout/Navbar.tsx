@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
+import { useCart } from '../../contexts/CartContext'
 
 interface NavbarProps {
   siteName?: string
@@ -15,6 +16,7 @@ export default function Navbar({
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { data: session, status } = useSession()
+  const { cartCount } = useCart()
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -34,11 +36,8 @@ export default function Navbar({
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/products" className="text-gray-700 hover:text-blue-600 transition-colors">
-              Produits
-            </Link>
-            <Link href="/categories" className="text-gray-700 hover:text-blue-600 transition-colors">
-              Catégories
+            <Link href="/shop" className="text-gray-700 hover:text-blue-600 transition-colors">
+              Boutique
             </Link>
             <Link href="/about" className="text-gray-700 hover:text-blue-600 transition-colors">
               À propos
@@ -48,29 +47,33 @@ export default function Navbar({
           {/* Right Side - Auth & Cart */}
           <div className="flex items-center space-x-4">
             {/* Cart Button */}
-            <button className="relative p-2 text-gray-700 hover:text-blue-600 transition-colors">
+            <Link href="/cart" className="relative p-2 text-gray-700 hover:text-blue-600 transition-colors">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                       d="M3 3h2l.4 2M7 13h10l4-8H5.4m.6 0l-2.6-5M7 13L5.4 5M7 13l-2.707 2.707M21 19a2 2 0 11-4 0 2 2 0 014 0zM9 19a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                0
-              </span>
-            </button>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartCount > 99 ? '99+' : cartCount}
+                </span>
+              )}
+            </Link>
 
             {/* Auth Section */}
             {status === "loading" ? (
               <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
             ) : session ? (
               <div className="flex items-center space-x-3">
-                <img 
-                  src={session.user?.image || '/default-avatar.png'} 
-                  alt={session.user?.name || 'User'}
-                  className="w-8 h-8 rounded-full"
-                />
-                <span className="hidden md:block text-sm text-gray-700">
-                  {session.user?.name}
-                </span>
+                <Link href="/profile" className="flex items-center space-x-2">
+                  <img 
+                    src={session.user?.image || '/default-avatar.png'} 
+                    alt={session.user?.name || 'User'}
+                    className="w-8 h-8 rounded-full"
+                  />
+                  <span className="hidden md:block text-sm text-gray-700">
+                    {session.user?.name}
+                  </span>
+                </Link>
                 <button
                   onClick={() => signOut()}
                   className="text-sm text-gray-500 hover:text-red-600 transition-colors"
@@ -104,11 +107,8 @@ export default function Navbar({
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col space-y-4">
-              <Link href="/products" className="text-gray-700 hover:text-blue-600">
-                Produits
-              </Link>
-              <Link href="/categories" className="text-gray-700 hover:text-blue-600">
-                Catégories
+              <Link href="/shop" className="text-gray-700 hover:text-blue-600">
+                Boutique
               </Link>
               <Link href="/about" className="text-gray-700 hover:text-blue-600">
                 À propos

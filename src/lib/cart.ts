@@ -6,13 +6,47 @@ export async function getOrCreateActiveCart(userId: string) {
   return safeDbOperation(async () => {
     let cart = await db.cart.findFirst({
       where: { userId, status: CartStatus.ACTIVE },
-      include: { items: { include: { variant: true } } }
+      include: { 
+        items: { 
+          include: { 
+            variant: {
+              include: {
+                product: {
+                  include: {
+                    translations: {
+                      where: { language: 'FR' }
+                    }
+                  }
+                },
+                media: true
+              }
+            }
+          } 
+        } 
+      }
     })
 
     if (!cart) {
       cart = await db.cart.create({
         data: { userId, status: CartStatus.ACTIVE },
-        include: { items: { include: { variant: true } } }
+        include: { 
+          items: { 
+            include: { 
+              variant: {
+                include: {
+                  product: {
+                    include: {
+                      translations: {
+                        where: { language: 'FR' }
+                      }
+                    }
+                  },
+                  media: true
+                }
+              }
+            } 
+          } 
+        }
       })
     }
 
