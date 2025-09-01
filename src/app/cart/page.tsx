@@ -111,7 +111,7 @@ export default function CartPage() {
               Vous devez être connecté pour voir votre panier
             </p>
             <Link 
-              href="/auth/signin"
+              href="/auth"
               className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Se connecter

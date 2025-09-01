@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
 import { useCart } from '../../contexts/CartContext'
+import Avatar from '../ui/Avatar'
 
 interface NavbarProps {
   siteName?: string
@@ -65,10 +66,11 @@ export default function Navbar({
             ) : session ? (
               <div className="flex items-center space-x-3">
                 <Link href="/profile" className="flex items-center space-x-2">
-                  <img 
-                    src={session.user?.image || '/default-avatar.png'} 
-                    alt={session.user?.name || 'User'}
-                    className="w-8 h-8 rounded-full"
+                  <Avatar 
+                    src={session.user?.image} 
+                    alt={session.user?.name}
+                    name={session.user?.name}
+                    size="md"
                   />
                   <span className="hidden md:block text-sm text-gray-700">
                     {session.user?.name}
@@ -82,12 +84,12 @@ export default function Navbar({
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => signIn()}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              <Link
+                href="/auth"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-block"
               >
                 Se connecter
-              </button>
+              </Link>
             )}
 
             {/* Mobile Menu Button */}

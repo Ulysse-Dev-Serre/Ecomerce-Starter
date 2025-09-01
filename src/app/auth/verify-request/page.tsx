@@ -25,7 +25,7 @@ export default function VerifyRequest() {
         </div>
         
         <a 
-          href="/auth/signin"
+          href="/auth"
           className="inline-block text-blue-600 hover:text-blue-800 font-medium"
         >
           ← Retour à la connexion

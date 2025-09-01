@@ -51,7 +51,7 @@ export default function ShopPage() {
 
   const addToCart = async (variantId: string, productName: string) => {
     if (!session?.user?.id) {
-      window.location.href = '/auth/signin'
+      window.location.href = '/auth'
       return
     }
 

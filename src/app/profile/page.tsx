@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
+import Avatar from '../../components/ui/Avatar'
 
 interface Order {
   id: string
@@ -61,7 +62,7 @@ export default function ProfilePage() {
               Vous devez être connecté pour voir votre profil
             </p>
             <Link 
-              href="/auth/signin"
+              href="/auth"
               className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Se connecter
@@ -97,10 +98,12 @@ export default function ProfilePage() {
           {/* Header Profile */}
           <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
             <div className="flex items-center space-x-4">
-              <img 
-                src={session.user?.image || '/default-avatar.png'} 
-                alt={session.user?.name || 'User'}
-                className="w-16 h-16 rounded-full border-2 border-gray-200"
+              <Avatar 
+                src={session.user?.image} 
+                alt={session.user?.name}
+                name={session.user?.name}
+                size="lg"
+                className="border-2 border-gray-200"
               />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
