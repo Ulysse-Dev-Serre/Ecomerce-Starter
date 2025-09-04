@@ -5,7 +5,7 @@ export const fetchCache = 'force-no-store'
 
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
-import AppleProvider from "next-auth/providers/apple"
+// import AppleProvider from "next-auth/providers/apple" // Temporairement désactivé
 import EmailProvider from "next-auth/providers/email"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
@@ -19,11 +19,11 @@ const providers = [
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || "demo-client-secret",
   }),
   
-  // Apple provider (with fallback values for development)
-  AppleProvider({
-    clientId: process.env.APPLE_ID || "demo-apple-id",
-    clientSecret: process.env.APPLE_SECRET || "demo-apple-secret",
-  }),
+  // Apple provider (with fallback values for development) - TEMPORAIREMENT DÉSACTIVÉ
+  // AppleProvider({
+  //   clientId: process.env.APPLE_ID || "demo-apple-id",
+  //   clientSecret: process.env.APPLE_SECRET || "demo-apple-secret",
+  // }),
   
   // Email provider (real email sending)
   EmailProvider({
