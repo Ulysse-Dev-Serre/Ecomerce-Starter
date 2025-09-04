@@ -38,7 +38,8 @@ npm run dev
 ### ✅ Production-ready
 - **Base PostgreSQL** avec Neon (serverless)
 - **Déploiement Vercel** en 1-clic
-- **Auth sécurisée** avec sessions JWT
+- **Auth sécurisée** avec sessions JWT et vérification d'ownership
+- **Création automatique** : Comptes créés à la connexion OAuth
 - **Performance** : Index optimisés, requêtes efficaces
 
 ## 🏗️ Architecture
@@ -146,6 +147,14 @@ Détails : [`docs/VERCEL_CHECKLIST.md`](docs/VERCEL_CHECKLIST.md)
 - **Tech** : Variables cyan/violet, navigation PC Gaming/Consoles  
 - **Beauté** : Variables rose/lavande, navigation Visage/Corps/Parfums
 - **Maison** : Variables vert/orange, navigation Salon/Cuisine/Chambre
+
+## 🔒 Sécurité
+
+**Politique de comptes :**
+- Création automatique lors de la première connexion OAuth
+- Vérification stricte d'ownership sur toutes les ressources utilisateur
+- Journalisation des tentatives d'accès non autorisé
+- Pas de purge automatique des comptes non vérifiés (à configurer selon vos besoins)
 
 ## 🏷️ Licence
 

@@ -1,16 +1,16 @@
-import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
+import { getAuthSession } from "./auth-session"
 import { db } from "@/lib/db"
 
 export async function requireAdmin() {
-  const session = await getServerSession()
+  const session = await getAuthSession()
   
-  if (!session?.user?.email) {
+  if (!session?.user?.id) {
     redirect("/auth")
   }
 
   const user = await db.user.findUnique({
-    where: { email: session.user.email },
+    where: { id: session.user.id },
     select: { role: true, id: true, email: true, name: true }
   })
 
@@ -21,9 +21,9 @@ export async function requireAdmin() {
   return user
 }
 
-export async function isUserAdmin(email: string): Promise<boolean> {
+export async function isUserAdmin(userId: string): Promise<boolean> {
   const user = await db.user.findUnique({
-    where: { email },
+    where: { id: userId },
     select: { role: true }
   })
   
