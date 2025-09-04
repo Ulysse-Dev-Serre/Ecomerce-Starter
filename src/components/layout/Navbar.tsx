@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
 import { useCart } from '../../contexts/CartContext'
 import Avatar from '../ui/Avatar'
@@ -16,8 +16,20 @@ export default function Navbar({
   logo 
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const { data: session, status } = useSession()
   const { cartCount } = useCart()
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetch(`/api/admin/check-role`)
+        .then(res => res.json())
+        .then(data => setIsAdmin(data.isAdmin))
+        .catch(() => setIsAdmin(false))
+    } else {
+      setIsAdmin(false)
+    }
+  }, [session])
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -43,6 +55,11 @@ export default function Navbar({
             <Link href="/about" className="text-gray-700 hover:text-blue-600 transition-colors">
               À propos
             </Link>
+            {isAdmin && (
+              <Link href="/admin" className="text-orange-600 hover:text-orange-700 transition-colors font-medium">
+                Admin
+              </Link>
+            )}
           </div>
 
           {/* Right Side - Auth & Cart */}
@@ -115,6 +132,11 @@ export default function Navbar({
               <Link href="/about" className="text-gray-700 hover:text-blue-600">
                 À propos
               </Link>
+              {isAdmin && (
+                <Link href="/admin" className="text-orange-600 hover:text-orange-700 font-medium">
+                  Admin
+                </Link>
+              )}
             </div>
           </div>
         )}
