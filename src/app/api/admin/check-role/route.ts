@@ -6,11 +6,11 @@ export async function GET() {
   try {
     const session = await getAuthSession()
     
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ isAdmin: false })
     }
 
-    const admin = await isUserAdmin(session.user.email)
+    const admin = await isUserAdmin(session.user.id)
     
     return NextResponse.json({ isAdmin: admin })
 
