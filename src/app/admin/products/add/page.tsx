@@ -184,7 +184,7 @@ export default function AddProductPage() {
                   type="text"
                   value={formData.slug}
                   onChange={(e) => updateFormData({ slug: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   placeholder="mon-super-produit"
                 />
               </div>
@@ -196,7 +196,7 @@ export default function AddProductPage() {
                 <select
                   value={formData.status}
                   onChange={(e) => updateFormData({ status: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                 >
                   <option value="DRAFT">Brouillon</option>
                   <option value="ACTIVE">Actif</option>
@@ -222,7 +222,7 @@ export default function AddProductPage() {
                           type="text"
                           value={translation.name}
                           onChange={(e) => updateTranslation(index, 'name', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
                           placeholder="Nom du produit"
                         />
                       </div>
@@ -234,7 +234,7 @@ export default function AddProductPage() {
                           value={translation.description}
                           onChange={(e) => updateTranslation(index, 'description', e.target.value)}
                           rows={4}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
                           placeholder="Description du produit"
                         />
                       </div>
@@ -281,7 +281,7 @@ export default function AddProductPage() {
                         type="text"
                         value={variant.sku}
                         onChange={(e) => updateVariant(index, 'sku', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
                         placeholder="SKU-123"
                       />
                     </div>
@@ -295,7 +295,7 @@ export default function AddProductPage() {
                         step="0.01"
                         value={variant.price}
                         onChange={(e) => updateVariant(index, 'price', parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
                         placeholder="29.99"
                       />
                     </div>
@@ -308,7 +308,7 @@ export default function AddProductPage() {
                         type="number"
                         value={variant.stock}
                         onChange={(e) => updateVariant(index, 'stock', parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
                         placeholder="100"
                       />
                     </div>
@@ -320,7 +320,7 @@ export default function AddProductPage() {
                       <select
                         value={variant.currency}
                         onChange={(e) => updateVariant(index, 'currency', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
                       >
                         <option value="CAD">CAD</option>
                         <option value="USD">USD</option>
