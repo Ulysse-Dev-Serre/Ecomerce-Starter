@@ -1,0 +1,149 @@
+### Test Rate Limiting sur l'authentification
+### Ce fichier teste les limits de taux sur les endpoints critiques
+### Utiliser avec l'extension REST Client de VS Code
+
+### Variables
+@baseUrl = http://localhost:3000
+@testEmail = test-rate-limit@example.com
+
+### Test 1: Vérification du rate limiting sur l'auth
+### Tentatives répétées de connexion pour déclencher le rate limiting
+
+POST {{baseUrl}}/api/auth/signin/credentials
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "wrongpassword"
+}
+
+###
+
+POST {{baseUrl}}/api/auth/signin/credentials
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "wrongpassword"
+}
+
+###
+
+POST {{baseUrl}}/api/auth/signin/credentials
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "wrongpassword"
+}
+
+###
+
+POST {{baseUrl}}/api/auth/signin/credentials
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "wrongpassword"
+}
+
+###
+
+POST {{baseUrl}}/api/auth/signin/credentials
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "wrongpassword"
+}
+
+###
+
+# Cette 6ème requête devrait être bloquée (429)
+POST {{baseUrl}}/api/auth/signin/credentials
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "wrongpassword"
+}
+
+###
+
+### Test 2: Rate limiting sur les opérations du panier
+### Note: Il faut être connecté et avoir un userId valide
+
+@userId = clm8h4r5g000008l27l95b8z1
+@variantId = clm8h4r5g000108l2ch95b8z2
+
+# 1er ajout au panier - OK
+POST {{baseUrl}}/api/cart/{{userId}}
+Content-Type: application/json
+
+{
+  "variantId": "{{variantId}}",
+  "quantity": 1
+}
+
+###
+
+# Multiples ajouts rapides pour tester le rate limiting (faire plusieurs fois CTRL+Shift+P > REST Client: Send Request)
+POST {{baseUrl}}/api/cart/{{userId}}
+Content-Type: application/json
+
+{
+  "variantId": "{{variantId}}",
+  "quantity": 1
+}
+
+###
+
+# Récupération du panier (testé 30+ fois pour déclencher la limite)
+GET {{baseUrl}}/api/cart/{{userId}}
+
+###
+
+### Test 3: Vérification que les headers de rate limiting sont présents
+
+POST {{baseUrl}}/api/auth/signin/credentials
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "wrongpassword"
+}
+
+### Test 4: Vérification du reset après expiration
+### Attendre la fenêtre de temps configurée et réessayer
+
+# Cette requête devrait marcher après expiration de la fenêtre
+POST {{baseUrl}}/api/auth/signin/credentials
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "wrongpassword"
+}
+
+### Test 5: Rate limiting par IP différente
+### Changer X-Forwarded-For pour simuler une IP différente
+
+POST {{baseUrl}}/api/auth/signin/credentials
+Content-Type: application/json
+X-Forwarded-For: 192.168.1.100
+
+{
+  "email": "{{testEmail}}",
+  "password": "wrongpassword"
+}
+
+###
+
+### Test 6: Test avec un utilisateur différent (même IP)
+POST {{baseUrl}}/api/auth/signin/credentials
+Content-Type: application/json
+
+{
+  "email": "different-user@example.com",
+  "password": "wrongpassword"
+}

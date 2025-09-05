@@ -12,7 +12,8 @@
     "db:studio": "prisma studio",
     "db:init": "./scripts/init-db.sh",
     "docs": "echo 'Use api-tests.http with REST Client extension'",
-    "test:api": "echo 'Open api-tests.http in VS Code with REST Client extension'"
+    "test:api": "echo 'Open api-tests.http in VS Code with REST Client extension'",
+    "test:rate-limit": "node tests/test-rate-limiting.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",

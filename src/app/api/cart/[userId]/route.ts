@@ -4,12 +4,17 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthSession } from '../../../../lib/auth-session'
 import { getOrCreateActiveCart, addToCart } from '../../../../lib/cart'
+import { withRateLimit } from '../../../../lib/rate-limit-middleware'
 
 // GET /api/cart/[userId] - Get user cart
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
+  // Appliquer rate limiting pour les opérations cart
+  const rateLimitResponse = await withRateLimit(request, { type: 'cart' })
+  if (rateLimitResponse) return rateLimitResponse
+  
   const { userId } = await params
   
   // Security check: Verify user is authenticated and accessing their own cart
@@ -41,6 +46,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
+  // Appliquer rate limiting pour les opérations cart
+  const rateLimitResponse = await withRateLimit(request, { type: 'cart' })
+  if (rateLimitResponse) return rateLimitResponse
+  
   const { userId } = await params
   
   // Security check: Verify user is authenticated and accessing their own cart

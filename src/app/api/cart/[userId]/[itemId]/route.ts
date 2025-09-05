@@ -4,12 +4,17 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthSession } from '../../../../../lib/auth-session'
 import { db, safeDbOperation } from '../../../../../lib/db'
+import { withRateLimit } from '../../../../../lib/rate-limit-middleware'
 
 // DELETE /api/cart/[userId]/[itemId] - Supprimer un item du panier
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string; itemId: string }> }
 ) {
+  // Appliquer rate limiting pour les opérations cart
+  const rateLimitResponse = await withRateLimit(request, { type: 'cart' })
+  if (rateLimitResponse) return rateLimitResponse
+  
   const { userId, itemId } = await params
   
   // Security check: Verify user is authenticated and accessing their own cart
@@ -61,6 +66,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string; itemId: string }> }
 ) {
+  // Appliquer rate limiting pour les opérations cart
+  const rateLimitResponse = await withRateLimit(request, { type: 'cart' })
+  if (rateLimitResponse) return rateLimitResponse
+  
   const { userId, itemId } = await params
   
   // Security check: Verify user is authenticated and accessing their own cart
