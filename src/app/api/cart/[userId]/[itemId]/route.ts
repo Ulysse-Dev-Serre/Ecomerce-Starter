@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthSession } from '../../../../../lib/auth-session'
 import { db, safeDbOperation } from '../../../../../lib/db'
 import { withRateLimit } from '../../../../../lib/rate-limit-middleware'
+import { createValidationMiddleware } from '../../../../../lib/validation'
 
 // DELETE /api/cart/[userId]/[itemId] - Supprimer un item du panier
 export async function DELETE(
@@ -84,11 +85,16 @@ export async function PATCH(
   }
   
   try {
-    const body = await request.json()
-    const { quantity } = body
-
-    if (!quantity || quantity <= 0) {
-      return NextResponse.json({ error: 'Quantity must be positive' }, { status: 400 })
+    // Validation stricte des données
+    const validateUpdate = createValidationMiddleware('updateCartItem', { logErrors: true })
+    const { data: validatedData, error: validationError } = await validateUpdate(request)
+    
+    if (validationError) {
+      return validationError
+    }
+    
+    if (!validatedData) {
+      return NextResponse.json({ error: 'Données manquantes' }, { status: 400 })
     }
 
     const result = await safeDbOperation(async () => {
@@ -110,7 +116,7 @@ export async function PATCH(
       // Mettre à jour la quantité
       return db.cartItem.update({
         where: { id: itemId },
-        data: { quantity }
+        data: { quantity: validatedData.quantity }
       })
     })
     

@@ -1,0 +1,51 @@
+### Test rapide de validation - endpoints fonctionnels
+@baseUrl = http://localhost:3000
+
+### Test 1: Contact avec données valides
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "subject": "Test de validation",
+  "message": "Ceci est un message de test pour vérifier que la validation fonctionne correctement.",
+  "phone": "+1-555-123-4567",
+  "company": "Test Corp"
+}
+
+### Expected: 200 - Données valides acceptées
+
+###
+
+### Test 2: Contact avec champs extra (devrait être rejeté)
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com", 
+  "subject": "Test",
+  "message": "Test message",
+  "isAdmin": true,
+  "extraField": "should be rejected"
+}
+
+### Expected: 400 - Champs inattendus rejetés
+
+###
+
+### Test 3: Contact avec données invalides
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "not-an-email",
+  "subject": "Test",
+  "message": ""
+}
+
+### Expected: 400 - Validation échoue
+
+###

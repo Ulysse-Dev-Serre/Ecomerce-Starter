@@ -15,7 +15,9 @@
     "test:api": "echo 'Open api-tests.http in VS Code with REST Client extension'",
     "test:rate-limit": "node tests/test-rate-limiting.js",
     "test:security-headers": "node tests/security-headers-test.js",
-    "security:audit": "echo 'Use: npm run test:security-headers && open https://securityheaders.com'"
+    "test:validation": "node tests/test-validation.js",
+    "security:audit": "echo 'Use: npm run test:security-headers && open https://securityheaders.com'",
+    "security:all": "npm run test:rate-limit && npm run test:security-headers && npm run test:validation"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",

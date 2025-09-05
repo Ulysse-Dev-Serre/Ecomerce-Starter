@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthSession } from '../../../../lib/auth-session'
 import { getOrCreateActiveCart, addToCart } from '../../../../lib/cart'
 import { withRateLimit } from '../../../../lib/rate-limit-middleware'
+import { createValidationMiddleware, ValidationSchemas } from '../../../../lib/validation'
 
 // GET /api/cart/[userId] - Get user cart
 export async function GET(
@@ -64,18 +65,19 @@ export async function POST(
   }
   
   try {
-    const body = await request.json()
-    const { variantId, quantity = 1 } = body
-
-    if (!variantId) {
-      return NextResponse.json({ error: 'variantId is required' }, { status: 400 })
+    // Validation stricte des données d'entrée
+    const validateCart = createValidationMiddleware('addToCart', { logErrors: true })
+    const { data: validatedData, error: validationError } = await validateCart(request)
+    
+    if (validationError) {
+      return validationError
+    }
+    
+    if (!validatedData) {
+      return NextResponse.json({ error: 'Données manquantes' }, { status: 400 })
     }
 
-    if (quantity <= 0) {
-      return NextResponse.json({ error: 'quantity must be positive' }, { status: 400 })
-    }
-
-    const result = await addToCart(userId, variantId, quantity)
+    const result = await addToCart(userId, validatedData.variantId, validatedData.quantity)
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 500 })

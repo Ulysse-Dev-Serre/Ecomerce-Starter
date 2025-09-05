@@ -1,0 +1,326 @@
+### Tests de validation avec payloads malformés
+### Ce fichier teste la robustesse de la validation des entrées utilisateur
+### Utiliser avec l'extension REST Client de VS Code
+
+@baseUrl = http://localhost:3000
+@validUserId = clm8h4r5g000008l27l95b8z1
+@validVariantId = clm8h4r5g000108l2ch95b8z2
+
+### Test 1: Contact - Payload malformé (champs extra)
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "subject": "Test",
+  "message": "Test message",
+  "maliciousField": "<script>alert('xss')</script>",
+  "extraField": "should be rejected",
+  "isAdmin": true,
+  "userId": "admin123"
+}
+
+### Expected: 400 - Champs inattendus rejetés
+
+###
+
+### Test 2: Contact - Données trop longues
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}{{$randomString}}",
+  "email": "test@example.com",
+  "subject": "Test",
+  "message": "A".repeat(6000)
+}
+
+### Expected: 400 - Taille maximale dépassée
+
+###
+
+### Test 3: Contact - Email invalide
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "not-an-email",
+  "subject": "Test",
+  "message": "Test message"
+}
+
+### Expected: 400 - Email invalide
+
+###
+
+### Test 4: Contact - Injection SQL tentative
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "Robert'; DROP TABLE users; --",
+  "email": "hacker@evil.com",
+  "subject": "SQL Injection Test",
+  "message": "'; DELETE FROM products WHERE 1=1; --"
+}
+
+### Expected: 400 ou données sanitized
+
+###
+
+### Test 5: Panier - Champs extra malveillants
+POST {{baseUrl}}/api/cart/{{validUserId}}
+Content-Type: application/json
+
+{
+  "variantId": "{{validVariantId}}",
+  "quantity": 1,
+  "price": 0.01,
+  "isAdmin": true,
+  "discountPercent": 100,
+  "freeShipping": true
+}
+
+### Expected: 400 - Champs extra rejetés
+
+###
+
+### Test 6: Panier - Quantité négative ou zéro
+POST {{baseUrl}}/api/cart/{{validUserId}}
+Content-Type: application/json
+
+{
+  "variantId": "{{validVariantId}}",
+  "quantity": -5
+}
+
+### Expected: 400 - Quantité invalide
+
+###
+
+### Test 7: Panier - Quantité excessive
+POST {{baseUrl}}/api/cart/{{validUserId}}
+Content-Type: application/json
+
+{
+  "variantId": "{{validVariantId}}",
+  "quantity": 999999
+}
+
+### Expected: 400 - Quantité trop élevée
+
+###
+
+### Test 8: Panier - ID malformé
+POST {{baseUrl}}/api/cart/{{validUserId}}
+Content-Type: application/json
+
+{
+  "variantId": "../../../etc/passwd",
+  "quantity": 1
+}
+
+### Expected: 400 - ID invalide
+
+###
+
+### Test 9: Panier - Type de données incorrect
+POST {{baseUrl}}/api/cart/{{validUserId}}
+Content-Type: application/json
+
+{
+  "variantId": 12345,
+  "quantity": "not_a_number"
+}
+
+### Expected: 400 - Types de données incorrects
+
+###
+
+### Test 10: JSON malformé
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "John"
+  "email": "missing-comma@test.com"
+}
+
+### Expected: 400 - JSON invalide
+
+###
+
+### Test 11: Payload excessivement volumineux
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "Test",
+  "email": "test@example.com",
+  "subject": "Test",
+  "message": "{{$randomString}}".repeat(10000),
+  "huge_array": [{{$randomString}}, {{$randomString}}, {{$randomString}}]
+}
+
+### Expected: 400 - Payload trop volumineux
+
+###
+
+### Test 12: Caractères Unicode malveillants
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "Test\u0000\u001f\u007f",
+  "email": "test@example.com",
+  "subject": "Unicode\u2028\u2029test",
+  "message": "Message with null byte\u0000and other control chars"
+}
+
+### Expected: 400 ou données sanitized
+
+###
+
+### Test 13: Produit - Mass assignment attack
+POST {{baseUrl}}/api/admin/products
+Content-Type: application/json
+Authorization: Bearer admin-token
+
+{
+  "slug": "test-product",
+  "status": "ACTIVE",
+  "translations": [{
+    "language": "FR",
+    "name": "Produit Test",
+    "description": "Description test"
+  }],
+  "variants": [{
+    "sku": "TEST-001",
+    "price": 19.99,
+    "stock": 10
+  }],
+  "isPublished": true,
+  "discount": 50,
+  "cost": 5.00,
+  "adminNotes": "This should not be allowed",
+  "internalId": "ADM001"
+}
+
+### Expected: 400 - Champs non autorisés rejetés
+
+###
+
+### Test 14: Attaque par injection de prototype
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "Test",
+  "email": "test@example.com",
+  "subject": "Test",
+  "message": "Test",
+  "__proto__": {
+    "isAdmin": true
+  },
+  "constructor": {
+    "prototype": {
+      "isAdmin": true
+    }
+  }
+}
+
+### Expected: 400 - Propriétés de prototype rejetées
+
+###
+
+### Test 15: Headers malveillants avec données valides
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+X-Forwarded-For: 127.0.0.1; DROP TABLE users; --
+User-Agent: <script>alert('xss')</script>
+
+{
+  "name": "Test",
+  "email": "test@example.com", 
+  "subject": "Test",
+  "message": "Valid data but malicious headers"
+}
+
+### Expected: 200 - Données valides acceptées, headers ignorés
+
+###
+
+### Test 16: Pagination - Paramètres invalides
+GET {{baseUrl}}/api/products?page=-1&limit=999999&search={{$randomString}}&status=INVALID_STATUS
+
+### Expected: 400 - Paramètres de pagination invalides
+
+###
+
+### Test 17: Upload simulation - Nom de fichier malveillant
+POST {{baseUrl}}/api/admin/media/upload
+Content-Type: multipart/form-data
+
+### Note: Simule upload avec nom de fichier dangereux
+### Dans un vrai test, on utiliserait un fichier avec nom: ../../../etc/passwd.jpg
+
+###
+
+### Test 18: Nested object attack
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "Test",
+  "email": "test@example.com",
+  "subject": "Test", 
+  "message": "Test",
+  "nested": {
+    "deep": {
+      "object": {
+        "with": {
+          "many": {
+            "levels": "attack"
+          }
+        }
+      }
+    }
+  }
+}
+
+### Expected: 400 - Objet imbriqué non autorisé rejeté
+
+###
+
+### Test 19: Array bombing
+POST {{baseUrl}}/api/admin/products
+Content-Type: application/json
+
+{
+  "slug": "test",
+  "status": "DRAFT",
+  "translations": [
+    "item1", "item2", "item3"
+  ].concat(Array(1000).fill("spam")),
+  "variants": Array(200).fill({
+    "sku": "spam",
+    "price": 1
+  })
+}
+
+### Expected: 400 - Trop d'éléments dans les arrays
+
+###
+
+### Test 20: Type confusion attack
+POST {{baseUrl}}/api/cart/{{validUserId}}
+Content-Type: application/json
+
+{
+  "variantId": ["array", "instead", "of", "string"],
+  "quantity": {"not": "a", "number": true}
+}
+
+### Expected: 400 - Types de données incorrects
