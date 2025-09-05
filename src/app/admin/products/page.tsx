@@ -1,6 +1,7 @@
 'use client'
 
 import Link from "next/link"
+import Image from "next/image"
 import { useState, useEffect } from "react"
 
 interface ProductVariant {
@@ -9,6 +10,12 @@ interface ProductVariant {
   price: number
   currency: string
   stock: number
+  media: Array<{
+    id: string
+    url: string
+    alt: string
+    isPrimary: boolean
+  }>
 }
 
 interface ProductTranslation {
@@ -161,6 +168,9 @@ export default function AdminProductsPage() {
                     Produit
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Image
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Statut
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -184,6 +194,32 @@ export default function AdminProductsPage() {
                         </div>
                         <div className="text-sm text-gray-500">{product.slug}</div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {(() => {
+                        // Find the first primary image across all variants
+                        const primaryImage = product.variants
+                          .flatMap(v => v.media)
+                          .find(m => m.isPrimary) || 
+                          product.variants.flatMap(v => v.media)[0]
+                        
+                        return primaryImage ? (
+                          <div className="w-12 h-12 relative">
+                            <Image
+                              src={primaryImage.url}
+                              alt={primaryImage.alt || 'Image produit'}
+                              fill
+                              className="object-cover rounded"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
+                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

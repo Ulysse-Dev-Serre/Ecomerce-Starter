@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import MediaManager from '@/components/admin/MediaManager'
 
 type Language = 'FR' | 'EN'
 
@@ -12,6 +13,13 @@ interface Translation {
   description: string
 }
 
+interface Media {
+  id?: string
+  url: string
+  alt: string
+  isPrimary: boolean
+}
+
 interface Variant {
   id: string
   sku: string
@@ -19,7 +27,7 @@ interface Variant {
   currency: string
   stock: number
   attributes: Array<{ attributeName: string; value: string }>
-  media: Array<{ url: string; alt: string; isPrimary: boolean }>
+  media: Media[]
 }
 
 interface ProductData {
@@ -139,13 +147,23 @@ export default function EditProductPage() {
     setErrors({})
     
     try {
+      // Prepare data with proper type conversions
+      const submitData = {
+        ...formData,
+        variants: formData.variants.map(variant => ({
+          ...variant,
+          price: typeof variant.price === 'string' ? parseFloat(variant.price) || 0 : variant.price,
+          stock: typeof variant.stock === 'string' ? parseInt(variant.stock) || 0 : variant.stock,
+        }))
+      }
+
       // Create a PUT endpoint for full product updates
       const response = await fetch(`/api/admin/products/${productId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       })
 
       const data = await response.json()
@@ -179,6 +197,14 @@ export default function EditProductPage() {
     if (formData) {
       const newVariants = [...formData.variants]
       newVariants[index] = { ...newVariants[index], [field]: value }
+      updateFormData({ variants: newVariants })
+    }
+  }
+
+  const updateVariantMedia = (variantIndex: number, media: Media[]) => {
+    if (formData) {
+      const newVariants = [...formData.variants]
+      newVariants[variantIndex] = { ...newVariants[variantIndex], media }
       updateFormData({ variants: newVariants })
     }
   }
@@ -393,6 +419,16 @@ export default function EditProductPage() {
                       <option value="EUR">EUR</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Media Management for this variant */}
+                <div className="mt-6">
+                  <h5 className="font-medium text-gray-700 mb-3">Images de cette variante</h5>
+                  <MediaManager
+                    variantId={variant.id}
+                    medias={variant.media}
+                    onChange={(media) => updateVariantMedia(index, media)}
+                  />
                 </div>
               </div>
             ))}

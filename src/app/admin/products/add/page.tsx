@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import MediaManager from '@/components/admin/MediaManager'
 
 type Language = 'FR' | 'EN'
 
@@ -18,13 +19,19 @@ interface Translation {
   description: string
 }
 
+interface Media {
+  url: string
+  alt: string
+  isPrimary: boolean
+}
+
 interface Variant {
   sku: string
   price: number
   currency: string
   stock: number
   attributes: Array<{ attributeName: string; value: string }>
-  media: Array<{ url: string; alt: string; isPrimary: boolean }>
+  media: Media[]
 }
 
 interface ProductFormData {
@@ -178,12 +185,22 @@ export default function AddProductPage() {
     setErrors({})
     
     try {
+      // Prepare data with proper type conversions
+      const submitData = {
+        ...formData,
+        variants: formData.variants.map(variant => ({
+          ...variant,
+          price: typeof variant.price === 'string' ? parseFloat(variant.price) || 0 : variant.price,
+          stock: typeof variant.stock === 'string' ? parseInt(variant.stock) || 0 : variant.stock,
+        }))
+      }
+
       const response = await fetch('/api/admin/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       })
 
       const data = await response.json()
@@ -227,6 +244,12 @@ export default function AddProductPage() {
   const updateVariant = (index: number, field: keyof Variant, value: any) => {
     const newVariants = [...formData.variants]
     newVariants[index] = { ...newVariants[index], [field]: value }
+    updateFormData({ variants: newVariants })
+  }
+
+  const updateVariantMedia = (variantIndex: number, media: Media[]) => {
+    const newVariants = [...formData.variants]
+    newVariants[variantIndex] = { ...newVariants[variantIndex], media }
     updateFormData({ variants: newVariants })
   }
 
@@ -499,10 +522,27 @@ export default function AddProductPage() {
             </div>
           )}
 
-          {/* Steps 3, 4, 5 - Simplified for now */}
+          {/* Step 3: Media */}
           {currentStep === 3 && (
-            <div className="text-center py-8">
-              <p className="text-gray-600">Section médias - À implémenter</p>
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900">Médias des variantes</h3>
+              {formData.variants.map((variant, variantIndex) => (
+                <div key={variantIndex} className="border rounded-lg p-6">
+                  <h4 className="font-medium text-gray-700 mb-4">
+                    Variante {variantIndex + 1} - {variant.sku || 'Sans SKU'}
+                  </h4>
+                  <MediaManager
+                    medias={variant.media}
+                    onChange={(media) => updateVariantMedia(variantIndex, media)}
+                  />
+                </div>
+              ))}
+              
+              {formData.variants.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Créez d'abord au moins une variante pour ajouter des médias</p>
+                </div>
+              )}
             </div>
           )}
 
