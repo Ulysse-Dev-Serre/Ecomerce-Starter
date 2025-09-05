@@ -1,0 +1,282 @@
+### Tests E2E de sécurité - Ownership et accès non autorisé
+### Ce fichier teste les protections d'accès et d'ownership
+### Utiliser avec l'extension REST Client de VS Code
+
+@baseUrl = http://localhost:3000
+@userA_id = test-user-regular-001
+@userB_id = test-user-other-002
+@admin_id = test-user-admin-003
+
+### ===== TESTS D'OWNERSHIP =====
+
+### Test 1a: Utilisateur A accède à son propre panier (autorisé)
+GET {{baseUrl}}/api/cart/{{userA_id}}
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+
+### Expected: 200 ou 404 (si pas de panier) - accès autorisé
+
+###
+
+### Test 1b: Utilisateur A tente d'accéder au panier de B (violation ownership)
+GET {{baseUrl}}/api/cart/{{userB_id}}
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local  
+X-Test-User-Role: USER
+
+### Expected: 403 - Accès refusé + log sécurité
+
+###
+
+### Test 2a: Utilisateur A modifie son profil (autorisé)
+PATCH {{baseUrl}}/api/users/{{userA_id}}
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+Content-Type: application/json
+
+{
+  "name": "Updated Name"
+}
+
+### Expected: 200 ou 404 - accès autorisé
+
+###
+
+### Test 2b: Utilisateur A tente de modifier le profil de B (violation ownership)
+PATCH {{baseUrl}}/api/users/{{userB_id}}
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+Content-Type: application/json
+
+{
+  "name": "Hacked Name"
+}
+
+### Expected: 403 - Accès refusé + log sécurité
+
+###
+
+### Test 3: Utilisateur A tente d'ajouter au panier de B
+POST {{baseUrl}}/api/cart/{{userB_id}}
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+Content-Type: application/json
+
+{
+  "variantId": "test-variant-123",
+  "quantity": 1
+}
+
+### Expected: 403 - Violation ownership
+
+###
+
+### ===== TESTS D'AUTHENTIFICATION =====
+
+### Test 4: Accès panier sans authentification
+GET {{baseUrl}}/api/cart/{{userA_id}}
+
+### Expected: 401 - Non autorisé
+
+###
+
+### Test 5: Accès profil utilisateur sans authentification
+GET {{baseUrl}}/api/users/{{userA_id}}
+
+### Expected: 401 - Non autorisé
+
+###
+
+### Test 6: Tentative ajout panier sans authentification
+POST {{baseUrl}}/api/cart/{{userA_id}}
+Content-Type: application/json
+
+{
+  "variantId": "test-variant-123",
+  "quantity": 1
+}
+
+### Expected: 401 - Non autorisé
+
+###
+
+### Test 7: Accès liste commandes sans authentification
+GET {{baseUrl}}/api/orders
+
+### Expected: 401 - Non autorisé
+
+###
+
+### ===== TESTS D'AUTORISATION ADMIN =====
+
+### Test 8a: Utilisateur régulier tente accès admin products
+GET {{baseUrl}}/api/admin/products
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+
+### Expected: 403 - Privilèges admin requis
+
+###
+
+### Test 8b: Admin accède aux produits (autorisé)
+GET {{baseUrl}}/api/admin/products
+X-Test-User-Id: {{admin_id}}
+X-Test-User-Email: admin@testauth.local
+X-Test-User-Role: ADMIN
+
+### Expected: 200 - Accès autorisé
+
+###
+
+### Test 9: Utilisateur régulier tente upload média admin
+POST {{baseUrl}}/api/admin/media/upload
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+Content-Type: application/json
+
+{
+  "test": "data"
+}
+
+### Expected: 403 - Privilèges admin requis
+
+###
+
+### Test 10: Non authentifié tente accès admin
+GET {{baseUrl}}/api/admin/categories
+
+### Expected: 401 - Authentification requise
+
+###
+
+### Test 11: Utilisateur régulier tente diagnostic sécurité
+GET {{baseUrl}}/api/admin/security-check
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+
+### Expected: 403 - Privilèges admin requis
+
+###
+
+### ===== TESTS CODES DE STATUT CORRECTS =====
+
+### Test 12a: 401 vs 403 - Sans auth vs mauvais user
+### Sans authentification → doit retourner 401
+GET {{baseUrl}}/api/cart/{{userA_id}}
+
+###
+
+### Avec auth mais mauvais utilisateur → doit retourner 403  
+GET {{baseUrl}}/api/cart/{{userA_id}}
+X-Test-User-Id: {{userB_id}}
+X-Test-User-Email: user.other@testauth.local
+X-Test-User-Role: USER
+
+###
+
+### Test 12b: 403 vs 404 - Admin route vs ressource inexistante
+### Non-admin sur route admin → 403
+GET {{baseUrl}}/api/admin/products
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+
+###
+
+### Admin sur ressource inexistante → 404
+GET {{baseUrl}}/api/admin/products/nonexistent-product-999
+X-Test-User-Id: {{admin_id}}
+X-Test-User-Email: admin@testauth.local
+X-Test-User-Role: ADMIN
+
+###
+
+### ===== TESTS DE LOGGING DE SÉCURITÉ =====
+
+### Test 13: Tentatives malveillantes (pour vérifier logs)
+### Ces requêtes doivent générer des logs de sécurité neutres
+
+### Tentative escalation privilège
+PATCH {{baseUrl}}/api/users/{{userA_id}}
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "isAdmin": true,
+  "role": "ADMIN",
+  "permissions": ["ALL"]
+}
+
+### Expected: 400 (validation) ou 200 (champs ignorés) - pas 403
+
+###
+
+### Tentative accès multiple ressources autres utilisateurs
+GET {{baseUrl}}/api/cart/{{userB_id}}
+X-Test-User-Id: {{userA_id}}
+
+###
+
+GET {{baseUrl}}/api/users/{{userB_id}}
+X-Test-User-Id: {{userA_id}}
+
+###
+
+GET {{baseUrl}}/api/users/{{userB_id}}/orders
+X-Test-User-Id: {{userA_id}}
+
+### Expected: Tous doivent retourner 403 avec logs appropriés
+
+###
+
+### ===== TESTS EDGE CASES =====
+
+### Test 14: IDs malformés ou injections
+GET {{baseUrl}}/api/cart/../admin/products
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+
+### Expected: 404 ou 400 - route malformée
+
+###
+
+### Test 15: Headers d'auth malformés
+GET {{baseUrl}}/api/cart/{{userA_id}}
+X-Test-User-Id: <script>alert('xss')</script>
+X-Test-User-Email: malicious@hacker.com
+X-Test-User-Role: SUPER_ADMIN
+
+### Expected: 401 ou 403 - headers invalides rejetés
+
+###
+
+### Test 16: Tentative bypass avec différents verbes HTTP
+DELETE {{baseUrl}}/api/admin/products
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+
+###
+
+PUT {{baseUrl}}/api/admin/products
+X-Test-User-Id: {{userA_id}}
+X-Test-User-Email: user.regular@testauth.local
+X-Test-User-Role: USER
+Content-Type: application/json
+
+{
+  "malicious": "data"
+}
+
+### Expected: 403 - Privilèges admin requis pour tous verbes
