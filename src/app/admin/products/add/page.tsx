@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation'
 
 type Language = 'FR' | 'EN'
 
+interface ValidationErrors {
+  slug?: string
+  translations?: { [index: number]: { name?: string; description?: string } }
+  variants?: { [index: number]: { sku?: string; price?: string } }
+  general?: string
+}
+
 interface Translation {
   language: Language
   name: string
@@ -40,6 +47,7 @@ export default function AddProductPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState<ValidationErrors>({})
   const [formData, setFormData] = useState<ProductFormData>({
     slug: '',
     status: 'DRAFT',
@@ -60,9 +68,74 @@ export default function AddProductPage() {
     ]
   })
 
+  const validateCurrentStep = (): boolean => {
+    const newErrors: ValidationErrors = {}
+    
+    if (currentStep === 1) {
+      // Validate slug
+      if (!formData.slug.trim()) {
+        newErrors.slug = 'Le slug est obligatoire'
+      }
+      
+      // Validate translations: each started translation must be complete
+      let hasValidTranslation = false
+      newErrors.translations = {}
+      
+      formData.translations.forEach((translation, index) => {
+        const hasName = translation.name.trim()
+        const hasDescription = translation.description.trim()
+        
+        // If either field is filled, both must be filled
+        if (hasName || hasDescription) {
+          if (!hasName) {
+            newErrors.translations![index] = { ...newErrors.translations![index], name: 'Le nom est obligatoire' }
+          }
+          if (!hasDescription) {
+            newErrors.translations![index] = { ...newErrors.translations![index], description: 'La description est obligatoire' }
+          }
+        }
+        
+        // Track if we have at least one complete translation
+        if (hasName && hasDescription) {
+          hasValidTranslation = true
+        }
+      })
+      
+      // Must have at least one complete translation
+      if (!hasValidTranslation) {
+        newErrors.general = 'Au moins une traduction complète (nom + description) est requise'
+      }
+      
+      // Clean up empty translation errors
+      if (Object.keys(newErrors.translations).length === 0) {
+        delete newErrors.translations
+      }
+    }
+    
+    if (currentStep === 2) {
+      // Validate at least one complete variant
+      const validVariants = formData.variants.filter(v => v.sku.trim() && v.price > 0)
+      if (validVariants.length === 0) {
+        newErrors.variants = {}
+        formData.variants.forEach((variant, index) => {
+          if (!variant.sku.trim()) {
+            newErrors.variants![index] = { ...newErrors.variants![index], sku: 'Le SKU est obligatoire' }
+          }
+          if (variant.price <= 0) {
+            newErrors.variants![index] = { ...newErrors.variants![index], price: 'Le prix doit être supérieur à 0' }
+          }
+        })
+      }
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleNext = () => {
-    if (currentStep < steps.length) {
+    if (validateCurrentStep() && currentStep < steps.length) {
       setCurrentStep(currentStep + 1)
+      setErrors({}) // Clear errors when moving to next step
     }
   }
 
@@ -72,8 +145,38 @@ export default function AddProductPage() {
     }
   }
 
+  const validateFinalForm = (): boolean => {
+    const newErrors: ValidationErrors = {}
+    
+    // Validate slug
+    if (!formData.slug.trim()) {
+      newErrors.slug = 'Le slug est obligatoire'
+    }
+    
+    // Validate at least one complete translation
+    const validTranslations = formData.translations.filter(t => t.name.trim() && t.description.trim())
+    if (validTranslations.length === 0) {
+      newErrors.general = 'Au moins une traduction complète (nom + description) est requise'
+    }
+    
+    // Validate at least one complete variant
+    const validVariants = formData.variants.filter(v => v.sku.trim() && v.price > 0)
+    if (validVariants.length === 0) {
+      newErrors.general = (newErrors.general ? newErrors.general + '. ' : '') + 'Au moins une variante complète (SKU + prix > 0) est requise'
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async () => {
+    if (!validateFinalForm()) {
+      return
+    }
+    
     setIsSubmitting(true)
+    setErrors({})
+    
     try {
       const response = await fetch('/api/admin/products', {
         method: 'POST',
@@ -83,13 +186,30 @@ export default function AddProductPage() {
         body: JSON.stringify(formData),
       })
 
+      const data = await response.json()
+
       if (response.ok) {
         router.push('/admin/products')
       } else {
-        console.error('Erreur lors de la création du produit')
+        if (response.status === 400 && data.details) {
+          // Handle Zod validation errors from API
+          const apiErrors: ValidationErrors = {}
+          data.details.forEach((issue: any) => {
+            if (issue.path.includes('slug')) {
+              apiErrors.slug = issue.message
+            } else if (issue.path.includes('translations')) {
+              apiErrors.general = 'Erreur dans les traductions : ' + issue.message
+            } else if (issue.path.includes('variants')) {
+              apiErrors.general = (apiErrors.general ? apiErrors.general + '. ' : '') + 'Erreur dans les variantes : ' + issue.message
+            }
+          })
+          setErrors(apiErrors)
+        } else {
+          setErrors({ general: data.error || 'Erreur lors de la création du produit' })
+        }
       }
     } catch (error) {
-      console.error('Erreur:', error)
+      setErrors({ general: 'Erreur réseau lors de la création du produit' })
     }
     setIsSubmitting(false)
   }
@@ -173,6 +293,27 @@ export default function AddProductPage() {
           <h2 className="text-lg font-semibold">{steps[currentStep - 1].name}</h2>
         </div>
         <div className="p-6">
+          {/* General Error Message */}
+          {errors.general && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    Erreur de validation
+                  </h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    {errors.general}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Step 1: Basic Information */}
           {currentStep === 1 && (
             <div className="space-y-6">
@@ -184,9 +325,14 @@ export default function AddProductPage() {
                   type="text"
                   value={formData.slug}
                   onChange={(e) => updateFormData({ slug: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
+                    errors.slug ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="mon-super-produit"
                 />
+                {errors.slug && (
+                  <p className="mt-1 text-sm text-red-600">{errors.slug}</p>
+                )}
               </div>
 
               <div>
@@ -222,9 +368,14 @@ export default function AddProductPage() {
                           type="text"
                           value={translation.name}
                           onChange={(e) => updateTranslation(index, 'name', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400 ${
+                            errors.translations?.[index]?.name ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                          }`}
                           placeholder="Nom du produit"
                         />
+                        {errors.translations?.[index]?.name && (
+                          <p className="mt-1 text-sm text-red-600">{errors.translations[index].name}</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -234,9 +385,14 @@ export default function AddProductPage() {
                           value={translation.description}
                           onChange={(e) => updateTranslation(index, 'description', e.target.value)}
                           rows={4}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400 ${
+                            errors.translations?.[index]?.description ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                          }`}
                           placeholder="Description du produit"
                         />
+                        {errors.translations?.[index]?.description && (
+                          <p className="mt-1 text-sm text-red-600">{errors.translations[index].description}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -281,9 +437,14 @@ export default function AddProductPage() {
                         type="text"
                         value={variant.sku}
                         onChange={(e) => updateVariant(index, 'sku', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400 ${
+                          errors.variants?.[index]?.sku ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                        }`}
                         placeholder="SKU-123"
                       />
+                      {errors.variants?.[index]?.sku && (
+                        <p className="mt-1 text-sm text-red-600">{errors.variants[index].sku}</p>
+                      )}
                     </div>
 
                     <div>
@@ -295,9 +456,14 @@ export default function AddProductPage() {
                         step="0.01"
                         value={variant.price}
                         onChange={(e) => updateVariant(index, 'price', parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400 ${
+                          errors.variants?.[index]?.price ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                        }`}
                         placeholder="29.99"
                       />
+                      {errors.variants?.[index]?.price && (
+                        <p className="mt-1 text-sm text-red-600">{errors.variants[index].price}</p>
+                      )}
                     </div>
 
                     <div>

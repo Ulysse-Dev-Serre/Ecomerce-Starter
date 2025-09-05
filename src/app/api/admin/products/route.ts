@@ -5,17 +5,33 @@ import { isUserAdmin } from "@/lib/auth-admin"
 import { z } from "zod"
 
 const CreateProductSchema = z.object({
-  slug: z.string().min(1),
+  slug: z.string().min(1, "Le slug est obligatoire"),
   status: z.enum(["DRAFT", "ACTIVE", "INACTIVE", "ARCHIVED"]).default("DRAFT"),
   translations: z.array(z.object({
     language: z.enum(["FR", "EN", "ES", "DE", "IT"]),
-    name: z.string().min(1),
-    description: z.string().optional(),
-  })),
+    name: z.string(),
+    description: z.string(),
+  })).min(1, "Au moins une traduction est requise")
+    .refine(
+      (translations) => {
+        // Check each translation: if name OR description is filled, both must be filled
+        const incompleteTranslations = translations.filter(t => {
+          const hasName = t.name.trim().length > 0
+          const hasDescription = t.description.trim().length > 0
+          return (hasName && !hasDescription) || (!hasName && hasDescription)
+        })
+        return incompleteTranslations.length === 0
+      },
+      "Chaque traduction commencée doit être complète (nom + description)"
+    )
+    .refine(
+      (translations) => translations.some(t => t.name.trim() && t.description.trim()),
+      "Au moins une traduction complète (nom + description) est requise"
+    ),
   categories: z.array(z.string()).optional(),
   variants: z.array(z.object({
-    sku: z.string().min(1),
-    price: z.number().positive(),
+    sku: z.string().min(1, "Le SKU est obligatoire"),
+    price: z.number().positive("Le prix doit être supérieur à 0"),
     currency: z.string().default("CAD"),
     stock: z.number().int().min(0).default(0),
     attributes: z.array(z.object({
@@ -28,17 +44,21 @@ const CreateProductSchema = z.object({
       alt: z.string().optional(),
       isPrimary: z.boolean().default(false)
     })).optional()
-  }))
+  })).min(1, "Au moins une variante est requise")
+    .refine(
+      (variants) => variants.some(v => v.sku.trim() && v.price > 0),
+      "Au moins une variante complète (SKU + prix > 0) est requise"
+    )
 })
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getAuthSession()
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
-    const isAdmin = await isUserAdmin(session.user.email)
+    const isAdmin = await isUserAdmin(session.user.id)
     if (!isAdmin) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 })
     }
@@ -56,10 +76,14 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Create translations
-      if (validatedData.translations.length > 0) {
+      // Create translations (only the complete ones)
+      const completeTranslations = validatedData.translations.filter(t => 
+        t.name.trim() && t.description.trim()
+      )
+      
+      if (completeTranslations.length > 0) {
         await tx.productTranslation.createMany({
-          data: validatedData.translations.map(t => ({
+          data: completeTranslations.map(t => ({
             productId: newProduct.id,
             language: t.language,
             name: t.name,
@@ -174,11 +198,11 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession()
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
-    const isAdmin = await isUserAdmin(session.user.email)
+    const isAdmin = await isUserAdmin(session.user.id)
     if (!isAdmin) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 })
     }
