@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import { useCart } from '../../contexts/CartContext'
@@ -121,25 +122,41 @@ export default function ShopPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {products.map((product) => (
                 <div key={product.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="aspect-square bg-gray-200 flex items-center justify-center">
-                    {product.variants[0]?.media[0] ? (
-                      <img 
-                        src={product.variants[0].media[0].url} 
-                        alt={product.variants[0].media[0].alt}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-gray-400 text-4xl">📱</span>
-                    )}
-                  </div>
+                  <Link href={`/products/${product.id}`}>
+                    <div className="aspect-square bg-gray-200 flex items-center justify-center cursor-pointer">
+                      {product.variants[0]?.media[0] ? (
+                        <img 
+                          src={product.variants[0].media[0].url} 
+                          alt={product.variants[0].media[0].alt}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <span className="text-gray-400 text-4xl">📱</span>
+                      )}
+                    </div>
+                  </Link>
                   
                   <div className="p-6">
-                    <h3 className="font-semibold text-gray-900 mb-2 text-lg">
-                      {product.translations[0]?.name || 'Produit'}
-                    </h3>
+                    <Link href={`/products/${product.id}`}>
+                      <h3 className="font-semibold text-gray-900 mb-2 text-lg hover:text-blue-600 cursor-pointer transition-colors">
+                        {product.translations[0]?.name || 'Produit'}
+                      </h3>
+                    </Link>
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                       {product.translations[0]?.description || 'Description non disponible'}
                     </p>
+                    
+                    <div className="flex justify-between items-center mb-4">
+                      <Link 
+                        href={`/products/${product.id}`}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Voir les détails →
+                      </Link>
+                      <span className="text-xs text-gray-500">
+                        {product.variants.length} variante{product.variants.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
                     
                     {product.variants.map((variant) => (
                       <div key={variant.id} className="border-t pt-4 mt-4 first:border-t-0 first:pt-0 first:mt-0">
