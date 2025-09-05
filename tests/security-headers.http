@@ -1,0 +1,130 @@
+### Tests des en-têtes de sécurité
+### Ce fichier permet de tester manuellement la présence des en-têtes de sécurité
+### Utiliser avec l'extension REST Client de VS Code
+
+@baseUrl = http://localhost:3000
+
+### Test 1: Page d'accueil - vérifier tous les en-têtes de sécurité
+GET {{baseUrl}}/
+Accept: text/html
+
+### Expected headers:
+# Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'...
+# Strict-Transport-Security: max-age=15768000; includeSubDomains; preload (production only)
+# X-Content-Type-Options: nosniff
+# X-Frame-Options: DENY
+# X-XSS-Protection: 1; mode=block
+# Referrer-Policy: strict-origin-when-cross-origin
+# Cross-Origin-Opener-Policy: same-origin
+# Cross-Origin-Resource-Policy: same-origin
+
+###
+
+### Test 2: Endpoint API - vérifier que les headers de sécurité sont appliqués
+GET {{baseUrl}}/api/products
+Accept: application/json
+
+###
+
+### Test 3: Page d'administration - vérifier la sécurité renforcée
+GET {{baseUrl}}/admin
+Accept: text/html
+
+###
+
+### Test 4: Route d'authentification - vérifier les cookies sécurisés
+GET {{baseUrl}}/auth/signin
+Accept: text/html
+
+###
+
+### Test 5: Upload de média - vérifier les headers spécifiques
+POST {{baseUrl}}/api/admin/media/upload
+Content-Type: multipart/form-data; boundary=---WebKitFormBoundary
+
+# Note: Ce test nécessite une authentification et un fichier valide
+
+###
+
+### Test 6: Tentative d'injection XSS - vérifier la protection CSP
+GET {{baseUrl}}/<script>alert('xss')</script>
+Accept: text/html
+
+### Expected: La CSP devrait bloquer l'exécution de scripts inline
+
+###
+
+### Test 7: Test avec différents User-Agents pour vérifier la cohérence
+GET {{baseUrl}}/
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+Accept: text/html
+
+###
+
+GET {{baseUrl}}/
+User-Agent: curl/7.68.0
+Accept: text/html
+
+###
+
+### Test 8: Vérifier que X-Powered-By est masqué
+GET {{baseUrl}}/
+Accept: */*
+
+### Expected: X-Powered-By header should be empty or absent
+
+###
+
+### Test 9: Test HTTPS redirect (si configuré)
+# Note: Seulement pour les environnements avec FORCE_HTTPS=true
+GET http://localhost:3000/
+Accept: text/html
+
+###
+
+### Test 10: Vérifier les headers sur les ressources statiques
+GET {{baseUrl}}/_next/static/css/app.css
+Accept: text/css
+
+###
+
+### Test 11: Tentative de path traversal - vérifier le blocage
+GET {{baseUrl}}/../../../etc/passwd
+Accept: text/plain
+
+### Expected: 404 ou blocage, avec log de sécurité
+
+###
+
+### Test 12: Frame embedding test - vérifier X-Frame-Options
+GET {{baseUrl}}/
+X-Frame-Options: ALLOWALL
+
+### Expected: Should be overridden by our DENY policy
+
+###
+
+### Test 13: Test des cookies avec différents chemins
+GET {{baseUrl}}/auth
+Cookie: test=value
+
+###
+
+GET {{baseUrl}}/admin
+Cookie: test=value
+
+###
+
+### Test 14: Vérification MIME type sniffing protection
+GET {{baseUrl}}/
+Accept: text/html
+X-Content-Type-Options: nosniff
+
+###
+
+### Test 15: Test avec requête CORS
+OPTIONS {{baseUrl}}/api/products
+Origin: https://malicious-site.com
+Access-Control-Request-Method: GET
+
+### Expected: CORS policy should be restrictive

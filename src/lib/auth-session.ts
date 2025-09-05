@@ -121,6 +121,38 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
+    // Durée de session : 7 jours
+    maxAge: 7 * 24 * 60 * 60, // 7 jours en secondes
+  },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true, // Empêche l'accès JS côté client
+        sameSite: 'lax', // Protection CSRF tout en permettant navigation normale
+        path: '/', // Disponible sur tout le site
+        secure: process.env.NODE_ENV === 'production', // HTTPS seulement en production
+        maxAge: 7 * 24 * 60 * 60 // 7 jours
+      }
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    },
+    csrfToken: {
+      name: 'next-auth.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
   },
   secret: process.env.NEXTAUTH_SECRET || "development-secret-change-in-production",
 }
