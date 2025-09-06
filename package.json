@@ -17,8 +17,11 @@
     "test:security-headers": "node tests/security-headers-test.js",
     "test:validation": "node tests/test-validation.js",
     "test:access-security": "node tests/test-access-security.js",
+    "test:payment-intent": "node tests/payment-intent-reuse.test.js",
+    "test:payment-edge-cases": "node tests/payment-intent-edge-cases.test.js",
     "security:audit": "echo 'Use: npm run test:security-headers && open https://securityheaders.com'",
-    "security:all": "npm run test:rate-limit && npm run test:security-headers && npm run test:validation && npm run test:access-security"
+    "security:all": "npm run test:rate-limit && npm run test:security-headers && npm run test:validation && npm run test:access-security",
+    "test:payments": "npm run test:payment-intent && npm run test:payment-edge-cases"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
