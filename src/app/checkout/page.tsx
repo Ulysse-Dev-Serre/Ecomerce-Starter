@@ -109,7 +109,15 @@ export default function CheckoutPage() {
     return null
   }
 
+  // Calculate total amount for Stripe
+  const totalAmount = cart.items.reduce((sum, item) => 
+    sum + (item.variant.price * item.quantity), 0
+  )
+
   const options = {
+    mode: 'payment' as const,
+    amount: Math.round(totalAmount * 100), // Convert to cents
+    currency: 'cad',
     appearance: {
       theme: 'stripe' as const,
       variables: {

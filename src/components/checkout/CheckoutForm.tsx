@@ -66,9 +66,6 @@ export default function CheckoutForm({ cart }: CheckoutFormProps) {
         return
       }
 
-      // TODO: Create payment intent on the server
-      // For now, we'll just simulate the payment process
-      
       // Get address data from AddressElement
       const addressElement = elements.getElement('address')
       let addressData = null
@@ -80,13 +77,8 @@ export default function CheckoutForm({ cart }: CheckoutFormProps) {
         }
       }
 
-      // Here you would typically:
-      // 1. Send cart data + address to your server
-      // 2. Server creates a PaymentIntent with Stripe
-      // 3. Server returns the client_secret
-      // 4. Use confirmPayment() with the client_secret
-
-      // For now, we'll just log the data and show success
+      // For demo purposes, simulate payment processing
+      // In production, you would create a PaymentIntent on your server
       console.log('Payment data collected:', {
         email,
         total,
@@ -96,11 +88,12 @@ export default function CheckoutForm({ cart }: CheckoutFormProps) {
         saveAddress
       })
 
-      // Simulate processing
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
-      // TODO: Replace with actual payment confirmation
-      alert('Formulaire de paiement validé ! (Intégration serveur en cours...)')
+      // For now, just show success message and redirect
+      // TODO: Replace with actual Stripe confirmPayment() call
+      console.log('✅ Payment form validated successfully')
       
       // Redirect to success page
       router.push('/checkout/success')
