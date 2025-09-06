@@ -2,7 +2,7 @@
 
 ## Vue d'Ensemble
 
-E-commerce starter moderne et production-ready basé sur **Next.js 14**, **Prisma**, **Stripe** et **NextAuth.js**. Conçu pour être facilement personnalisable pour différentes niches.
+Documentation concise et pratique pour développeurs. Chaque guide fait moins de 150 lignes et se concentre sur l'essentiel avec des commandes prêtes à l'emploi.
 
 ## 🚀 Démarrage Rapide
 

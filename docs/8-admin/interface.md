@@ -1,653 +1,224 @@
-# Interface d'Administration
+# Administration - Guide Pratique
 
-## Vue d'Ensemble
+## 🚀 Accès Rapide
 
-Interface d'administration complète pour gérer produits, commandes, utilisateurs et analytics de l'e-commerce.
+### Créer un utilisateur admin (MÉTHODE SIMPLE)
 
-## Accès et Authentification
+```bash
+# LA méthode que vous utilisiez avant (trouvée !)
+node scripts/create-admin.js ulyssebo255@gmail.com
 
-### Rôles et Permissions
-```typescript
-enum UserRole {
-  USER = 'USER',
-  ADMIN = 'ADMIN', 
-  SUPER_ADMIN = 'SUPER_ADMIN'
-}
-
-// Permissions par rôle
-const rolePermissions = {
-  USER: ['view_profile', 'manage_own_orders'],
-  ADMIN: ['manage_products', 'manage_orders', 'view_analytics'],
-  SUPER_ADMIN: ['*'] // Toutes permissions
-}
+# Fonctionne avec n'importe quel email
+node scripts/create-admin.js nimportequelle@email.com
 ```
 
-### Protection des Routes Admin
-```typescript
-// middleware.ts
-export function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    const token = request.cookies.get('next-auth.session-token')
-    
-    if (!token) {
-      return NextResponse.redirect(new URL('/auth/signin', request.url))
-    }
-    
-    // Vérifier rôle admin
-    const user = await verifyAdminToken(token)
-    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
-      return NextResponse.redirect(new URL('/unauthorized', request.url))
-    }
-  }
-  
-  return NextResponse.next()
-}
+### Autres méthodes admin
+
+```bash
+# Interface graphique
+npm run db:studio
+# → Users → Trouver email → Changer role → ADMIN
+
+# Commande SQL directe
+npx prisma db execute --stdin <<< "
+UPDATE users SET role = 'ADMIN' WHERE email = 'ulyssebo255@gmail.com';"
 ```
 
-## Dashboard Principal
+### Commandes de base
 
-### Métriques Clés
-```typescript
-// app/admin/dashboard/page.tsx
-export default async function AdminDashboard() {
-  const metrics = await getDashboardMetrics()
-  
-  return (
-    <div className="space-y-6">
-      {/* KPIs principaux */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <MetricCard
-          title="Ventes du jour"
-          value={formatCurrency(metrics.dailySales)}
-          change={metrics.dailySalesChange}
-          icon={DollarSign}
-        />
-        <MetricCard
-          title="Commandes"
-          value={metrics.todayOrders}
-          change={metrics.ordersChange}
-          icon={ShoppingCart}
-        />
-        <MetricCard
-          title="Nouveaux clients"
-          value={metrics.newCustomers}
-          change={metrics.customersChange}
-          icon={Users}
-        />
-        <MetricCard
-          title="Taux conversion"
-          value={`${metrics.conversionRate}%`}
-          change={metrics.conversionChange}
-          icon={TrendingUp}
-        />
-      </div>
-      
-      {/* Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SalesChart data={metrics.salesChart} />
-        <OrdersChart data={metrics.ordersChart} />
-      </div>
-      
-      {/* Tables récentes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RecentOrders orders={metrics.recentOrders} />
-        <TopProducts products={metrics.topProducts} />
-      </div>
-    </div>
-  )
-}
+```bash
+# Démarrer le projet
+npm run dev                    # Serveur développement
+npm run build                  # Build production  
+npm run start                  # Serveur production
+
+# Base de données
+npm run db:generate           # Générer client Prisma
+npm run db:push              # Pousser schema vers DB
+npm run db:studio            # Interface graphique DB
+npm run db:init              # Initialiser DB complète
 ```
 
-### Composants Dashboard
-```typescript
-// components/admin/MetricCard.tsx
-export function MetricCard({ title, value, change, icon: Icon }: Props) {
-  const isPositive = change >= 0
-  
-  return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-        </div>
-        <div className="p-3 bg-blue-50 rounded-full">
-          <Icon className="w-6 h-6 text-blue-600" />
-        </div>
-      </div>
-      <div className="mt-4 flex items-center">
-        <span className={cn(
-          "inline-flex items-center text-sm font-medium",
-          isPositive ? "text-green-600" : "text-red-600"
-        )}>
-          {isPositive ? (
-            <TrendingUp className="w-4 h-4 mr-1" />
-          ) : (
-            <TrendingDown className="w-4 h-4 mr-1" />
-          )}
-          {Math.abs(change)}%
-        </span>
-        <span className="ml-2 text-sm text-gray-500">vs mois dernier</span>
-      </div>
-    </div>
-  )
-}
+## 📊 Interface Admin
+
+### Pages disponibles
+- **Dashboard** : `/admin` - Métriques et KPIs
+- **Produits** : `/admin/products` - Gestion catalogue
+- **Commandes** : `/admin/orders` - Suivi commandes
+- **Utilisateurs** : `/admin/users` - Gestion clients
+- **Analytics** : `/admin/analytics` - Rapports détaillés
+
+### Permissions par rôle
+```
+USER        → Profil + ses commandes
+ADMIN       → Gestion produits/commandes/analytics  
+SUPER_ADMIN → Accès total + gestion utilisateurs
 ```
 
-## Gestion des Produits
+## 🧪 Tests et Sécurité
 
-### Liste des Produits
-```typescript
-// app/admin/products/page.tsx
-export default async function ProductsAdminPage({
-  searchParams
-}: {
-  searchParams: { page?: string; search?: string; status?: string }
-}) {
-  const page = Number(searchParams.page) || 1
-  const search = searchParams.search || ''
-  const status = searchParams.status || 'all'
-  
-  const { products, totalPages, totalCount } = await getProductsAdmin({
-    page,
-    search,
-    status,
-    limit: 20
-  })
-  
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Produits</h1>
-        <Button asChild>
-          <Link href="/admin/products/new">
-            <Plus className="w-4 h-4 mr-2" />
-            Nouveau produit
-          </Link>
-        </Button>
-      </div>
-      
-      {/* Filtres */}
-      <ProductFilters 
-        defaultSearch={search}
-        defaultStatus={status}
-      />
-      
-      {/* Table produits */}
-      <ProductsTable 
-        products={products} 
-        totalCount={totalCount}
-      />
-      
-      {/* Pagination */}
-      <Pagination
-        currentPage={page}
-        totalPages={totalPages}
-        baseUrl="/admin/products"
-      />
-    </div>
-  )
-}
+### Tests de Sécurité (CRITIQUES)
+```bash
+# Suite sécurité complète (avant production)
+npm run security:all          # Tous les tests sécurité
+
+# Tests individuels  
+npm run test:rate-limit        # Rate limiting endpoints
+npm run test:security-headers  # Headers sécurité (CSP, HSTS)
+npm run test:validation        # Validation Zod strict
+npm run test:access-security   # Ownership & RBAC
+npm run test:auth-security     # Protection account takeover
+npm run test:webhook-race      # Race conditions webhooks
 ```
 
-### Formulaire Produit
-```typescript
-// components/admin/ProductForm.tsx
-export function ProductForm({ product, onSubmit, isLoading }: Props) {
-  const form = useForm<ProductFormData>({
-    resolver: zodResolver(productSchema),
-    defaultValues: product || {
-      slug: '',
-      status: 'DRAFT',
-      translations: [
-        { language: 'FR', name: '', description: '', price: 0 }
-      ]
-    }
-  })
-  
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Informations de base */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Informations générales</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Slug (URL)</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="mon-produit" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="DRAFT">Brouillon</SelectItem>
-                      <SelectItem value="ACTIVE">Actif</SelectItem>
-                      <SelectItem value="INACTIVE">Inactif</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-        
-        {/* Traductions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Traductions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TranslationTabs 
-              languages={['FR', 'EN', 'ES']}
-              translations={form.watch('translations')}
-              onTranslationChange={(index, field, value) => {
-                const translations = form.getValues('translations')
-                translations[index] = { ...translations[index], [field]: value }
-                form.setValue('translations', translations)
-              }}
-            />
-          </CardContent>
-        </Card>
-        
-        {/* Images */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Images</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ImageUploader
-              images={form.watch('images') || []}
-              onImagesChange={(images) => form.setValue('images', images)}
-              maxImages={5}
-            />
-          </CardContent>
-        </Card>
-        
-        {/* Actions */}
-        <div className="flex justify-end gap-4">
-          <Button type="button" variant="outline" asChild>
-            <Link href="/admin/products">Annuler</Link>
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {product ? 'Mettre à jour' : 'Créer'}
-          </Button>
-        </div>
-      </form>
-    </Form>
-  )
-}
+### Tests de Paiements (STRIPE)
+```bash
+# Suite paiements complète
+npm run test:payments          # Runner automatique (serveur requis)
+
+# Tests individuels Stripe
+npm run test:payment-intent        # PaymentIntent logic
+npm run test:payment-edge-cases    # Edge cases montants
+npm run test:payment-security      # Validation montants serveur
+npm run test:webhook-security      # Webhooks HMAC + idempotence
+npm run test:payment-test-mode     # Mode test sécurisé
+npm run test:webhook-integration   # Tests intégration API
+
+# Tests manuels (pas besoin serveur)
+npm run test:payments:manual       # Suite manuelle
 ```
 
-## Gestion des Commandes
+### Tests Manuels (REST Client)
+```bash
+# Tests avec REST Client VS Code
+npm run test:api              # Guide pour api-tests.http
+npm run docs                  # Guide REST Client
 
-### Liste des Commandes
-```typescript
-// app/admin/orders/page.tsx  
-export default async function OrdersAdminPage({
-  searchParams
-}: {
-  searchParams: { page?: string; status?: string; search?: string }
-}) {
-  const page = Number(searchParams.page) || 1
-  const status = searchParams.status || 'all'
-  const search = searchParams.search || ''
-  
-  const { orders, totalPages, totalCount } = await getOrdersAdmin({
-    page,
-    status,
-    search,
-    limit: 20
-  })
-  
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Commandes</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/admin/orders/export">
-              <Download className="w-4 h-4 mr-2" />
-              Exporter
-            </Link>
-          </Button>
-        </div>
-      </div>
-      
-      {/* Statistiques rapides */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <OrderStatusCard status="PENDING" count={orders.pendingCount} />
-        <OrderStatusCard status="CONFIRMED" count={orders.confirmedCount} />
-        <OrderStatusCard status="SHIPPED" count={orders.shippedCount} />
-        <OrderStatusCard status="DELIVERED" count={orders.deliveredCount} />
-      </div>
-      
-      {/* Filtres */}
-      <OrderFilters 
-        defaultStatus={status}
-        defaultSearch={search}
-      />
-      
-      {/* Table commandes */}
-      <OrdersTable orders={orders.data} />
-      
-      {/* Pagination */}
-      <Pagination
-        currentPage={page}
-        totalPages={totalPages}
-        baseUrl="/admin/orders"
-      />
-    </div>
-  )
-}
+# Fichiers disponibles dans tests/
+# - api-tests.http            (tests généraux)
+# - access-security.http      (ownership tests)  
+# - rate-limiting.http        (rate limit tests)
+# - security-headers.http     (headers tests)
+# - validation-malformed.http (payload malveillants)
 ```
 
-### Détail Commande
-```typescript
-// app/admin/orders/[id]/page.tsx
-export default async function OrderDetailPage({
-  params
-}: {
-  params: { id: string }
-}) {
-  const order = await getOrderAdmin(params.id)
-  
-  if (!order) {
-    notFound()
-  }
-  
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Commande #{order.orderNumber}</h1>
-          <p className="text-gray-600">
-            Passée le {formatDate(order.createdAt)}
-          </p>
-        </div>
-        <OrderStatusBadge status={order.status} />
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Informations principales */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Items de commande */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Articles commandés</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <OrderItemsList items={order.items} />
-            </CardContent>
-          </Card>
-          
-          {/* Historique */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Historique</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <OrderTimeline events={order.timeline} />
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Statut et actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Statut</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <OrderStatusSelector
-                currentStatus={order.status}
-                onStatusChange={(newStatus) => 
-                  updateOrderStatus(order.id, newStatus)
-                }
-              />
-              
-              <div className="space-y-2">
-                <Button className="w-full" variant="outline">
-                  <Mail className="w-4 h-4 mr-2" />
-                  Envoyer email client
-                </Button>
-                <Button className="w-full" variant="outline">
-                  <Printer className="w-4 h-4 mr-2" />
-                  Imprimer facture
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Informations client */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Client</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="font-medium">{order.user.name}</p>
-                <p className="text-sm text-gray-600">{order.user.email}</p>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="font-medium mb-2">Adresse de livraison</h4>
-                <AddressDisplay address={order.shippingAddress} />
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="font-medium mb-2">Adresse de facturation</h4>
-                <AddressDisplay address={order.billingAddress} />
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Résumé paiement */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Paiement</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between">
-                <span>Sous-total</span>
-                <span>{formatCurrency(order.subtotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Livraison</span>
-                <span>{formatCurrency(order.shippingCost)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Taxes</span>
-                <span>{formatCurrency(order.taxAmount)}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between font-bold">
-                <span>Total</span>
-                <span>{formatCurrency(order.totalAmount)}</span>
-              </div>
-              
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm">
-                  <strong>Paiement:</strong> {order.paymentMethod}
-                </p>
-                <p className="text-sm">
-                  <strong>Statut:</strong> 
-                  <PaymentStatusBadge status={order.paymentStatus} />
-                </p>
-                {order.paymentId && (
-                  <p className="text-sm font-mono">
-                    ID: {order.paymentId}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
-}
+## 🔧 Configuration
+
+### Variables d'environnement admin
+```bash
+# .env
+NEXTAUTH_SECRET=your-secret-key
+ADMIN_DEFAULT_EMAIL=ulyssebo255@gmail.com
+ADMIN_NOTIFICATION_EMAIL=admin@yourstore.com
 ```
 
-## Analytics et Rapports
-
-### Dashboard Analytics
-```typescript
-// app/admin/analytics/page.tsx
-export default async function AnalyticsPage({
-  searchParams
-}: {
-  searchParams: { period?: string; compare?: string }
-}) {
-  const period = searchParams.period || '30d'
-  const compare = searchParams.compare === 'true'
-  
-  const analytics = await getAnalytics({ period, compare })
-  
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Analytics</h1>
-        <div className="flex gap-2">
-          <PeriodSelector value={period} />
-          <Button variant="outline" asChild>
-            <Link href="/admin/analytics/export">
-              <Download className="w-4 h-4 mr-2" />
-              Exporter rapport
-            </Link>
-          </Button>
-        </div>
-      </div>
-      
-      {/* KPIs principaux */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <AnalyticsCard
-          title="Chiffre d'affaires"
-          value={formatCurrency(analytics.revenue)}
-          previousValue={compare ? analytics.previousRevenue : undefined}
-          format="currency"
-        />
-        <AnalyticsCard
-          title="Commandes"
-          value={analytics.orders}
-          previousValue={compare ? analytics.previousOrders : undefined}
-          format="number"
-        />
-        <AnalyticsCard
-          title="Taux de conversion"
-          value={`${analytics.conversionRate}%`}
-          previousValue={compare ? analytics.previousConversionRate : undefined}
-          format="percentage"
-        />
-        <AnalyticsCard
-          title="Panier moyen"
-          value={formatCurrency(analytics.averageOrderValue)}
-          previousValue={compare ? analytics.previousAverageOrderValue : undefined}
-          format="currency"
-        />
-      </div>
-      
-      {/* Graphiques principaux */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Évolution du chiffre d'affaires</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RevenueChart data={analytics.revenueChart} />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Commandes par jour</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <OrdersChart data={analytics.ordersChart} />
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Analytics détaillées */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Produits</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TopProductsList products={analytics.topProducts} />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Sources de trafic</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TrafficSourcesChart data={analytics.trafficSources} />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Géographie</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <GeographyChart data={analytics.geography} />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  )
-}
+### Personnalisation
+```bash
+# Logo admin dans : public/images/branding/
+# Couleurs dans : src/styles/admin.css
+# Textes dans : src/lib/admin-config.ts
 ```
 
-## Gestion des Utilisateurs
+## 🚨 Dépannage
 
-### Liste Utilisateurs
-```typescript
-// app/admin/users/page.tsx
-export default async function UsersAdminPage() {
-  const { users, totalCount } = await getUsersAdmin()
-  
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Utilisateurs</h1>
-        <UserStats totalUsers={totalCount} />
-      </div>
-      
-      <UsersTable users={users} />
-    </div>
-  )
-}
+### Problèmes d'accès admin
+```bash
+# 1. Vérifier le rôle user
+SELECT email, role FROM users WHERE email = 'votre@email.com';
+
+# 2. Forcer le rôle admin
+UPDATE users SET role = 'ADMIN' WHERE email = 'votre@email.com';
+
+# 3. Vider le cache session
+# → Se déconnecter/reconnecter
 ```
 
-Cette interface d'administration fournit tous les outils nécessaires pour gérer efficacement un e-commerce avec un design moderne et une UX optimisée pour les administrateurs.
+### Erreurs courantes
+```bash
+# "Unauthorized" → Rôle insuffisant  
+# "Session expired" → Se reconnecter
+# "Database error" → Vérifier DB_URL
+# "403 Forbidden" → Vérifier NEXTAUTH_SECRET
+```
+
+## 📝 Maintenance
+
+### Tâches régulières
+```bash
+# Nettoyage des sessions expirées
+npm run db:cleanup-sessions
+
+# Backup des données critiques  
+npm run db:backup-orders
+npm run db:backup-users
+
+# Nettoyage des webhooks anciens
+npm run webhooks:cleanup
+```
+
+### Monitoring admin
+```bash
+# Logs admin dans : logs/admin.log
+# Métriques dans : /admin/analytics
+# Alertes email configurables
+```
+
+## 📝 Scripts Disponibles
+
+### Scripts Direct (Node)
+```bash
+# Administration
+node scripts/create-admin.js email@example.com  # Créer/promouvoir admin ⭐
+node scripts/make-admin.js email@example.com    # Alternative admin  
+node scripts/test-runner.js                     # Runner tests paiements
+
+# Initialisation
+./scripts/init-db.sh                           # Init DB complète
+```
+
+### Commandes Prisma
+```bash
+# Client et Schema  
+npx prisma generate          # Générer client
+npx prisma db push          # Pousser schema (sans migration)
+npx prisma studio           # Interface graphique
+npx prisma migrate dev      # Créer migration
+npx prisma migrate deploy   # Appliquer migrations prod
+
+# Debug et maintenance
+npx prisma db execute --stdin <<< "SELECT * FROM users;"
+npx prisma format           # Formater schema.prisma
+```
+
+### Vérifications Pré-Production
+```bash
+# Checklist complète
+npm run security:all && \
+npm run test:payments && \
+npm run lint && \
+npm run build
+
+# Test intégration (serveur requis)
+npm run dev &               # Lancer serveur background
+npm run test:webhook-integration
+```
+
+## 💡 Workflow Recommandé
+
+### Développement
+```bash
+1. npm run dev              # Démarrer
+2. npm run db:studio        # Gérer données  
+3. node scripts/create-admin.js votre@email.com
+4. npm run security:all     # Vérifier sécurité
+```
+
+### Avant Déploiement
+```bash
+1. npm run build            # Tester build
+2. npm run security:all     # Tests sécurité
+3. npm run test:payments    # Tests paiements
+4. git commit && git push   # Déployer
+```
+
+Cette documentation contient **TOUTES** les commandes disponibles dans le projet pour une gestion complète.
