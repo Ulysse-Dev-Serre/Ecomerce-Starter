@@ -23,6 +23,9 @@ interface WebhookEventRecord {
 /**
  * Vérifie si un événement a déjà été traité (idempotence)
  * Enregistre l'événement pour éviter le rejeu
+ * 
+ * SÉCURITÉ: Utilise une approche "INSERT OR CONFLICT" pour éviter les race conditions
+ * En cas de workers parallèles, un seul réussira le CREATE, l'autre récupèrera l'existant
  */
 export async function ensureEventIdempotence(
   eventId: string,
@@ -33,50 +36,10 @@ export async function ensureEventIdempotence(
     // Calculer hash du payload pour vérification d'intégrité
     const payloadHash = payload ? createPayloadHash(payload) : null
 
-    // Vérifier si l'événement existe déjà
-    let eventRecord = await db.webhookEvent.findUnique({
-      where: { eventId }
-    })
-
-    if (eventRecord) {
-      // Événement déjà connu
-      console.log('Webhook event already exists:', {
-        eventId,
-        eventType,
-        processed: eventRecord.processed,
-        retryCount: eventRecord.retryCount,
-        processedAt: eventRecord.processedAt,
-      })
-
-      if (eventRecord.processed) {
-        // Déjà traité avec succès - ignorer (idempotence)
-        console.log('✅ Event already processed successfully - ignoring replay')
-        return { 
-          shouldProcess: false, 
-          isRetry: true, 
-          eventRecord 
-        }
-      } else {
-        // Échec précédent - autoriser retry avec incrémentation compteur
-        console.log('🔄 Retrying previously failed event')
-        
-        await db.webhookEvent.update({
-          where: { eventId },
-          data: { 
-            retryCount: { increment: 1 },
-            payloadHash
-          }
-        })
-        
-        return { 
-          shouldProcess: true, 
-          isRetry: true, 
-          eventRecord 
-        }
-      }
-    } else {
-      // Nouvel événement - enregistrer et traiter
-      eventRecord = await db.webhookEvent.create({
+    // APPROCHE SÉCURISÉE: Tenter de créer d'abord (atomic operation)
+    // En cas de conflit (event déjà existant), récupérer l'existant
+    try {
+      const eventRecord = await db.webhookEvent.create({
         data: {
           eventId,
           eventType,
@@ -97,12 +60,74 @@ export async function ensureEventIdempotence(
         isRetry: false, 
         eventRecord 
       }
+      
+    } catch (createError: any) {
+      // CONFLIT DÉTECTÉ: L'eventId existe déjà (contrainte unique)
+      // Cela peut arriver avec des workers parallèles ou des retries Stripe
+      
+      if (createError?.code === 'P2002' || createError?.message?.includes('Unique constraint')) {
+        console.log('🔍 Event conflict detected, fetching existing record:', { eventId })
+        
+        // Récupérer l'enregistrement existant
+        const existingRecord = await db.webhookEvent.findUnique({
+          where: { eventId }
+        })
+        
+        if (!existingRecord) {
+          // Race condition étrange - l'enregistrement a disparu entre temps
+          console.error('⚠️ Race condition: record disappeared after conflict!')
+          return { 
+            shouldProcess: true, 
+            isRetry: false 
+          }
+        }
+        
+        console.log('Existing webhook event found:', {
+          eventId,
+          eventType,
+          processed: existingRecord.processed,
+          retryCount: existingRecord.retryCount,
+          processedAt: existingRecord.processedAt,
+        })
+
+        if (existingRecord.processed) {
+          // Déjà traité avec succès - ignorer (idempotence)
+          console.log('✅ Event already processed successfully - ignoring replay/duplicate')
+          return { 
+            shouldProcess: false, 
+            isRetry: true, 
+            eventRecord: existingRecord 
+          }
+        } else {
+          // Échec précédent ou traitement en cours - autoriser retry
+          console.log('🔄 Retrying previously failed/pending event')
+          
+          const updatedRecord = await db.webhookEvent.update({
+            where: { eventId },
+            data: { 
+              retryCount: { increment: 1 },
+              payloadHash: payloadHash || existingRecord.payloadHash
+            }
+          })
+          
+          return { 
+            shouldProcess: true, 
+            isRetry: true, 
+            eventRecord: updatedRecord 
+          }
+        }
+        
+      } else {
+        // Erreur différente (problème DB, network, etc.)
+        console.error('Unexpected database error during event creation:', createError)
+        throw createError
+      }
     }
 
   } catch (error) {
-    console.error('Error checking event idempotence:', error)
+    console.error('Critical error in event idempotence check:', error)
     
-    // En cas d'erreur, être conservateur et traiter l'événement
+    // En cas d'erreur critique, être conservateur et traiter l'événement
     // (mieux traiter en doublon qu'ignorer un vrai événement)
     console.warn('⚠️  Idempotence check failed - processing event (conservative approach)')
     

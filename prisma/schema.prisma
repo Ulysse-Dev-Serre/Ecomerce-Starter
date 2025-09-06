@@ -438,7 +438,7 @@ model Review {
 
 model WebhookEvent {
   id            String   @id @default(cuid())
-  eventId       String   @unique // Stripe event.id
+  eventId       String   // Stripe event.id - contrainte unique définie ci-dessous
   eventType     String   // payment_intent.succeeded, etc.
   processed     Boolean  @default(false)
   processedAt   DateTime?
@@ -448,8 +448,8 @@ model WebhookEvent {
   createdAt     DateTime @default(now())
   
   // Index pour performance et cleanup
-  @@index([eventId])
   @@index([eventType, processed])
   @@index([createdAt])
+  @@unique([eventId], map: "webhook_event_id_unique") // SÉCURITÉ: Contrainte explicite pour éviter race conditions
   @@map("webhook_events")
 }

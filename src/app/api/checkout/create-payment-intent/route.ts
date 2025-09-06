@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
     
     // Handle Stripe errors specifically
     if (error instanceof Error && 'type' in error) {
-      const stripeError = error as Stripe.StripeError
+      const stripeError = error as any
       return NextResponse.json({ 
         error: 'Erreur de traitement du paiement',
         details: stripeError.message 

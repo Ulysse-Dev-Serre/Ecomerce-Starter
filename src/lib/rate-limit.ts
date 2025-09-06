@@ -14,6 +14,25 @@ interface RateLimitConfig {
 
 const stores = new Map<string, RateLimitStore>()
 
+// Configuration rate limiting par type d'endpoint
+const RATE_LIMIT_CONFIGS = {
+  auth: { 
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    max: 5,                    // 5 tentatives max
+    blockDuration: 30 * 60 * 1000  // Blocage 30 min
+  },
+  cart: {
+    windowMs: 60 * 1000,      // 1 minute  
+    max: 30,                   // 30 requêtes max
+    blockDuration: 5 * 60 * 1000   // Blocage 5 min
+  },
+  general: {
+    windowMs: 60 * 1000,      // 1 minute
+    max: 100,                  // 100 requêtes max
+    blockDuration: 60 * 1000   // Blocage 1 min
+  }
+}
+
 // Nettoie les entrées expirées toutes les 5 minutes
 setInterval(() => {
   const now = Date.now()

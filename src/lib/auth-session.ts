@@ -61,39 +61,40 @@ export const authOptions: NextAuthOptions = {
           const user = await db.user.findUnique({
             where: { email: credentials.email }
           })
+          
+          // SÉCURITÉ: Ne pas créer d'utilisateur lors du sign-in
+          // L'inscription doit passer par une route dédiée
           if (!user) {
-            const hashedPassword = await bcrypt.hash(credentials.password, 12)
-            const newUser = await db.user.create({
-              data: {
-                email: credentials.email,
-                name: credentials.email.split('@')[0],
-                password: hashedPassword,
-              }
-            })
-            return {
-              id: newUser.id,
-              email: newUser.email,
-              name: newUser.name,
-            }
+            console.warn(`[SECURITY] Tentative de connexion pour email inexistant: ${credentials.email}`)
+            return null
           }
-          if (user.password) {
-            const isValidPassword = await bcrypt.compare(credentials.password, user.password)
-            if (!isValidPassword) {
-              return null
-            }
-          } else {
-            const hashedPassword = await bcrypt.hash(credentials.password, 12)
-            await db.user.update({
-              where: { id: user.id },
-              data: { password: hashedPassword }
-            })
+          
+          // SÉCURITÉ: Rejeter si l'utilisateur n'a pas de mot de passe
+          // Cela empêche l'account takeover d'utilisateurs Google/Email existants
+          if (!user.password) {
+            console.warn(`[SECURITY] Tentative d'account takeover détectée pour: ${credentials.email}`)
+            // Retourner null avec une erreur explicite pour debugging
+            throw new Error('ACCOUNT_NO_PASSWORD')
           }
+          
+          // Vérification du mot de passe pour utilisateur avec password valide
+          const isValidPassword = await bcrypt.compare(credentials.password, user.password)
+          if (!isValidPassword) {
+            console.warn(`[SECURITY] Mot de passe incorrect pour: ${credentials.email}`)
+            return null
+          }
+          
           return {
             id: user.id,
             email: user.email,
             name: user.name,
           }
         } catch (error) {
+          if (error instanceof Error && error.message === 'ACCOUNT_NO_PASSWORD') {
+            console.error('[SECURITY] Account takeover attempt blocked:', credentials.email)
+            // En production, ne pas révéler la raison exacte
+            return null
+          }
           console.error('Auth error:', error)
           return null
         }

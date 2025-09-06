@@ -113,7 +113,7 @@ export async function calculateCartTotal(
       }
 
       // Utiliser le prix DB (jamais le client)
-      const unitPrice = item.variant.price
+      const unitPrice = parseFloat(item.variant.price.toString())
       const lineTotal = unitPrice * item.quantity
       subtotal += lineTotal
 
@@ -181,7 +181,7 @@ function calculateTaxes(
   const country = shippingAddress?.country || 'CA'
   const state = shippingAddress?.state || 'QC'
   
-  let rate = TAX_RATES.default
+  let rate: number = TAX_RATES.default
   
   if (country === 'CA' && TAX_RATES.CA[state as keyof typeof TAX_RATES.CA]) {
     rate = TAX_RATES.CA[state as keyof typeof TAX_RATES.CA]

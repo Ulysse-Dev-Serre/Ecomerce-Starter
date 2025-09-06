@@ -222,9 +222,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
           status: 'PAID',
           totalAmount: parseFloat(paymentIntent.metadata.total || '0'),
           currency: paymentIntent.currency.toUpperCase(),
-          stripePaymentIntentId: paymentIntent.id,
-          shippingAddress: paymentIntent.shipping?.address ? JSON.stringify(paymentIntent.shipping.address) : null,
-          billingAddress: paymentIntent.shipping?.address ? JSON.stringify(paymentIntent.shipping.address) : null,
+          shippingAddress: paymentIntent.shipping?.address ? JSON.stringify(paymentIntent.shipping.address) : '{}',
+          billingAddress: paymentIntent.shipping?.address ? JSON.stringify(paymentIntent.shipping.address) : '{}',
         }
       })
 
@@ -235,8 +234,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
             orderId: order.id,
             variantId: cartItem.variantId,
             quantity: cartItem.quantity,
-            price: cartItem.variant.price,
+            priceSnapshot: cartItem.variant.price,
             currency: cartItem.variant.currency,
+            productSnapshot: JSON.stringify({
+              variantId: cartItem.variantId,
+              sku: cartItem.variant.sku
+            }),
           }
         })
 
@@ -259,8 +262,11 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
           currency: paymentIntent.currency.toUpperCase(),
           method: 'STRIPE',
           status: 'COMPLETED',
-          stripePaymentIntentId: paymentIntent.id,
-          transactionId: paymentIntent.charges.data[0]?.id || paymentIntent.id,
+          externalId: paymentIntent.id,
+          transactionData: JSON.stringify({
+            stripePaymentIntentId: paymentIntent.id,
+            charges: paymentIntent.latest_charge || paymentIntent.id,
+          }),
         }
       })
 

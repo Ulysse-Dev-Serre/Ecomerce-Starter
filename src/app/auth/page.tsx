@@ -67,7 +67,10 @@ export default function AuthPage() {
       })
 
       if (result?.error) {
-        setMessage({ text: 'Email ou mot de passe incorrect', type: 'error' })
+        setMessage({ 
+          text: 'Email ou mot de passe incorrect. Si vous n\'avez pas de compte, créez-en un d\'abord.', 
+          type: 'error' 
+        })
       } else if (result?.ok) {
         setMessage({ text: 'Connexion réussie !', type: 'success' })
         setTimeout(() => window.location.href = '/', 1000)
@@ -112,10 +115,10 @@ export default function AuthPage() {
               <span className="text-white font-bold text-xl">🛍️</span>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Se connecter ou créer un compte
+              Se connecter
             </h1>
             <p className="text-gray-600">
-              La première connexion crée votre compte automatiquement
+              Connectez-vous à votre compte existant
             </p>
           </div>
 
@@ -274,8 +277,21 @@ export default function AuthPage() {
             </div>
           )}
 
+          {/* Signup Link */}
+          <div className="text-center border-t border-gray-200 pt-6">
+            <p className="text-sm text-gray-600 mb-4">
+              Vous n'avez pas encore de compte ?
+            </p>
+            <a 
+              href="/auth/signup"
+              className="inline-flex items-center justify-center w-full py-3 px-4 border-2 border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 transition-colors"
+            >
+              Créer un nouveau compte
+            </a>
+          </div>
+
           {/* Footer */}
-          <div className="text-center">
+          <div className="text-center mt-6">
             <p className="text-xs text-gray-500 leading-relaxed">
               En continuant, vous acceptez nos{' '}
               <a href="/terms" className="text-blue-600 hover:text-blue-500 underline">

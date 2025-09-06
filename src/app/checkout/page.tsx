@@ -61,7 +61,7 @@ export default function CheckoutPage() {
     }
   }
 
-  const createPaymentIntent = async (cartData) => {
+  const createPaymentIntent = async (cartData: any) => {
     // Éviter les appels multiples simultanés
     if (isCreatingPaymentIntent) {
       console.log('Payment Intent creation already in progress, skipping...')
@@ -79,8 +79,8 @@ export default function CheckoutPage() {
 
     try {
       // Calculate total for default billing address
-      const subtotal = cartData.items.reduce((sum, item) => 
-        sum + (item.variant.price * item.quantity), 0
+      const subtotal = cartData.items.reduce((sum: number, item: any) =>
+      sum + (item.variant.price * item.quantity), 0
       )
       const taxes = subtotal * 0.15
       const total = subtotal + taxes

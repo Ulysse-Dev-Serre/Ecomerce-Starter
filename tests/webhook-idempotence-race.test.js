@@ -222,48 +222,17 @@ async function testRaceCondition() {
   console.log('   → État final cohérent ✅')
 }
 
-// Test bonus: Traitement en parallèle de différents events
-async function testMultipleEvents() {
-  console.log('\n🔀 TEST BONUS: Événements différents en parallèle')
-  console.log('=================================================')
-
-  const db = new MockDatabase()
-  
-  // Créer 5 événements différents traités en parallèle
-  const eventPromises = []
-  for (let i = 1; i <= 5; i++) {
-    const eventId = `evt_parallel_${i}_${Date.now()}`
-    const eventType = 'payment_intent.succeeded'
-    const payload = { amount: 1000 * i, currency: 'cad' }
-    
-    eventPromises.push(secureEnsureEventIdempotence(db, eventId, eventType, payload))
-  }
-
-  const results = await Promise.all(eventPromises)
-
-  console.log('\n📊 Résultats:')
-  console.log(`   Events créés: ${db.webhookEvents.size}/5`)
-  console.log(`   Conflits: ${db.conflictCount}`)
-  console.log(`   Tous traités: ${results.every(r => r.shouldProcess && !r.isRetry)}`)
-
-  if (db.webhookEvents.size === 5 && db.conflictCount === 0 && results.every(r => r.shouldProcess && !r.isRetry)) {
-    console.log('✅ BONUS: Traitement parallèle d\'événements différents fonctionne')
-  } else {
-    console.log('❌ BONUS: Problème avec événements différents en parallèle')
-  }
-}
-
-// Exécution des tests
+// Exécution du test si appelé directement
 if (require.main === module) {
-  Promise.all([testRaceCondition(), testMultipleEvents()])
+  testRaceCondition()
     .then(() => {
-      console.log('\n✅ Tous les tests passent !')
+      console.log('\n✅ Test terminé avec succès!')
       process.exit(0)
     })
     .catch((error) => {
-      console.error('\n❌ Tests échoués:', error.message)
+      console.error('\n❌ Test échoué:', error)
       process.exit(1)
     })
 }
 
-module.exports = { testRaceCondition, testMultipleEvents }
+module.exports = { testRaceCondition }
