@@ -121,6 +121,20 @@ export const BaseValidationSchemas = {
 
 // Schémas de validation pour les endpoints critiques
 export const ValidationSchemas = {
+  // Payment Intent schema
+  createPaymentIntent: z.object({
+    cartId: z.string().cuid('Invalid cart ID'),
+    email: z.string().email('Email invalide'),
+    billingAddress: z.object({
+      line1: z.string().min(1, 'Adresse requise'),
+      line2: z.string().optional(),
+      city: z.string().min(1, 'Ville requise'),
+      state: z.string().optional(),
+      postal_code: z.string().min(1, 'Code postal requis'),
+      country: z.string().length(2, 'Code pays invalide'),
+    }),
+    saveAddress: z.boolean().default(false),
+  }),
   // Produits
   createProduct: z.object({
     slug: BaseValidationSchemas.slug,

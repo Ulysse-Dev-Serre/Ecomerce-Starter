@@ -7,7 +7,56 @@ import { useRouter, useSearchParams } from 'next/navigation'
 export default function CheckoutSuccessPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [orderNumber] = useState(() => `ORD-${Date.now()}`) // Temporary order number
+  const [orderNumber, setOrderNumber] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  
+  const paymentIntentId = searchParams.get('payment_intent')
+
+  useEffect(() => {
+    if (paymentIntentId) {
+      // In production, you might want to verify the payment status
+      // For now, we'll just generate an order number
+      setOrderNumber(`ORD-${Date.now()}`)
+      setLoading(false)
+    } else {
+      setError('Paiement non trouvé')
+      setLoading(false)
+    }
+  }, [paymentIntentId])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Vérification du paiement...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 flex items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
+            <svg className="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Erreur</h1>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => router.push('/cart')}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+          >
+            Retourner au panier
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">

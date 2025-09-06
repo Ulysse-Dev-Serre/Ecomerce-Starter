@@ -41,6 +41,8 @@ export default function CheckoutForm({ cart }: CheckoutFormProps) {
   const [errorMessage, setErrorMessage] = useState('')
   const [email, setEmail] = useState(session?.user?.email || '')
   const [saveAddress, setSaveAddress] = useState(true)
+  const [clientSecret, setClientSecret] = useState('')
+  const [paymentIntentId, setPaymentIntentId] = useState('')
 
   // Calculate total
   const total = cart.items.reduce((sum, item) => 
@@ -77,26 +79,51 @@ export default function CheckoutForm({ cart }: CheckoutFormProps) {
         }
       }
 
-      // For demo purposes, simulate payment processing
-      // In production, you would create a PaymentIntent on your server
-      console.log('Payment data collected:', {
-        email,
-        total,
-        currency: cart.items[0]?.variant?.currency || 'CAD',
-        items: cart.items.length,
-        address: addressData,
-        saveAddress
+      if (!addressData) {
+        setErrorMessage('Veuillez compléter votre adresse de facturation')
+        setIsLoading(false)
+        return
+      }
+
+      // Step 1: Create Payment Intent on server
+      const response = await fetch('/api/checkout/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cartId: cart.id,
+          email,
+          billingAddress: addressData,
+          saveAddress,
+        }),
       })
 
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      if (!response.ok) {
+        const error = await response.json()
+        setErrorMessage(error.error || 'Erreur lors de la création du paiement')
+        setIsLoading(false)
+        return
+      }
 
-      // For now, just show success message and redirect
-      // TODO: Replace with actual Stripe confirmPayment() call
-      console.log('✅ Payment form validated successfully')
-      
-      // Redirect to success page
-      router.push('/checkout/success')
+      const { clientSecret: newClientSecret, paymentIntentId: newPaymentIntentId } = await response.json()
+
+      // Step 2: Confirm payment with Stripe
+      const { error: confirmError } = await stripe.confirmPayment({
+        elements,
+        clientSecret: newClientSecret,
+        confirmParams: {
+          return_url: `${window.location.origin}/checkout/success?payment_intent=${newPaymentIntentId}`,
+          receipt_email: email,
+        },
+      })
+
+      if (confirmError) {
+        setErrorMessage(confirmError.message || 'Erreur lors de la confirmation du paiement')
+      } else {
+        // Payment successful - user will be redirected by Stripe
+        console.log('✅ Payment confirmed successfully')
+      }
 
     } catch (error) {
       console.error('Payment error:', error)
