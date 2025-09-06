@@ -29,9 +29,11 @@ interface CheckoutFormProps {
       }
     }>
   }
+  clientSecret: string
+  paymentIntentId: string
 }
 
-export default function CheckoutForm({ cart }: CheckoutFormProps) {
+export default function CheckoutForm({ cart, clientSecret: providedClientSecret, paymentIntentId: providedPaymentIntentId }: CheckoutFormProps) {
   const stripe = useStripe()
   const elements = useElements()
   const { data: session } = useSession()
@@ -41,8 +43,6 @@ export default function CheckoutForm({ cart }: CheckoutFormProps) {
   const [errorMessage, setErrorMessage] = useState('')
   const [email, setEmail] = useState(session?.user?.email || '')
   const [saveAddress, setSaveAddress] = useState(true)
-  const [clientSecret, setClientSecret] = useState('')
-  const [paymentIntentId, setPaymentIntentId] = useState('')
 
   // Calculate total
   const total = cart.items.reduce((sum, item) => 
@@ -85,35 +85,11 @@ export default function CheckoutForm({ cart }: CheckoutFormProps) {
         return
       }
 
-      // Step 1: Create Payment Intent on server
-      const response = await fetch('/api/checkout/create-payment-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cartId: cart.id,
-          email,
-          billingAddress: addressData,
-          saveAddress,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        setErrorMessage(error.error || 'Erreur lors de la création du paiement')
-        setIsLoading(false)
-        return
-      }
-
-      const { clientSecret: newClientSecret, paymentIntentId: newPaymentIntentId } = await response.json()
-
-      // Step 2: Confirm payment with Stripe
+      // Confirm payment with existing Payment Intent
       const { error: confirmError } = await stripe.confirmPayment({
         elements,
-        clientSecret: newClientSecret,
         confirmParams: {
-          return_url: `${window.location.origin}/checkout/success?payment_intent=${newPaymentIntentId}`,
+          return_url: `${window.location.origin}/checkout/success?payment_intent=${providedPaymentIntentId}`,
           receipt_email: email,
         },
       })
@@ -146,8 +122,7 @@ export default function CheckoutForm({ cart }: CheckoutFormProps) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="votre@email.com"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
         />
       </div>
 
@@ -160,7 +135,7 @@ export default function CheckoutForm({ cart }: CheckoutFormProps) {
           <AddressElement 
             options={{
               mode: 'billing',
-              allowedCountries: ['CA', 'US', 'FR'],
+              allowedCountries: ['CA', 'US'],
               blockPoBox: true,
               fields: {
                 phone: 'always',

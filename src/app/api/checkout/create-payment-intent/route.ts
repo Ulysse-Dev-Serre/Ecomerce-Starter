@@ -96,11 +96,38 @@ export async function POST(request: NextRequest) {
     // Convert to cents for Stripe
     const stripeAmount = formatAmountForStripe(totalAmount, 'cad')
 
-    // Create PaymentIntent with Stripe
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Check if there's already an active PaymentIntent for this cart
+    const existingPaymentIntents = await stripe.paymentIntents.list({
+      limit: 10,
+    })
+
+    const existingPI = existingPaymentIntents.data.find(pi => 
+      pi.metadata.cartId === cart.id && 
+      pi.metadata.userId === session.user.id &&
+      pi.status !== 'canceled' &&
+      pi.status !== 'succeeded' &&
+      pi.amount === stripeAmount &&
+      pi.currency === 'cad'
+    )
+
+    let paymentIntent: any
+
+    if (existingPI) {
+      // Reuse existing PaymentIntent
+      paymentIntent = existingPI
+      console.log('Reusing existing Payment Intent:', {
+        paymentIntentId: existingPI.id,
+        cartId: cart.id,
+        userId: session.user.id,
+        status: existingPI.status,
+        timestamp: new Date().toISOString(),
+      })
+    } else {
+      // Create new PaymentIntent with Stripe
+      paymentIntent = await stripe.paymentIntents.create({
       amount: stripeAmount,
       currency: 'cad',
-      customer_email: email,
+      receipt_email: email,
       metadata: {
         cartId: cart.id,
         userId: session.user.id,
@@ -125,6 +152,17 @@ export async function POST(request: NextRequest) {
       },
     })
 
+      // Log successful payment intent creation (no sensitive data)
+      console.log('Payment Intent created:', {
+        paymentIntentId: paymentIntent.id,
+        amount: stripeAmount,
+        currency: 'cad',
+        userId: session.user.id,
+        cartId: cart.id,
+        timestamp: new Date().toISOString(),
+      })
+    }
+
     // Save address to user profile if requested
     if (saveAddress) {
       await db.address.create({
@@ -144,15 +182,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Log successful payment intent creation (no sensitive data)
-    console.log('Payment Intent created:', {
-      paymentIntentId: paymentIntent.id,
-      amount: stripeAmount,
-      currency: 'cad',
-      userId: session.user.id,
-      cartId: cart.id,
-      timestamp: new Date().toISOString(),
-    })
+
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,

@@ -20,6 +20,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState('')
   const [clientSecret, setClientSecret] = useState('')
   const [paymentIntentId, setPaymentIntentId] = useState('')
+  const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return // Still loading session
@@ -50,11 +51,76 @@ export default function CheckoutPage() {
       }
       
       setCart(data.data)
+      
+      // Create Payment Intent once cart is loaded
+      await createPaymentIntent(data.data)
     } catch (error) {
       console.error('Erreur panier:', error)
       setError('Impossible de charger votre panier. Veuillez réessayer.')
+      setLoading(false)
+    }
+  }
+
+  const createPaymentIntent = async (cartData) => {
+    // Éviter les appels multiples simultanés
+    if (isCreatingPaymentIntent) {
+      console.log('Payment Intent creation already in progress, skipping...')
+      return
+    }
+
+    // Si on a déjà un clientSecret pour ce panier, ne pas recréer
+    if (clientSecret && paymentIntentId) {
+      console.log('Payment Intent already exists, reusing existing one')
+      setLoading(false)
+      return
+    }
+
+    setIsCreatingPaymentIntent(true)
+
+    try {
+      // Calculate total for default billing address
+      const subtotal = cartData.items.reduce((sum, item) => 
+        sum + (item.variant.price * item.quantity), 0
+      )
+      const taxes = subtotal * 0.15
+      const total = subtotal + taxes
+
+      console.log('Creating/fetching Payment Intent for cart:', cartData.id)
+
+      const response = await fetch('/api/checkout/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cartId: cartData.id,
+          email: session?.user?.email || '',
+          billingAddress: {
+            line1: '123 Rue temporaire',
+            city: 'Montréal',
+            state: 'QC',
+            postal_code: 'H3H 2T4',
+            country: 'CA',
+          },
+          saveAddress: false,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erreur création Payment Intent')
+      }
+
+      const data = await response.json()
+      setClientSecret(data.clientSecret)
+      setPaymentIntentId(data.paymentIntentId)
+      
+      console.log('Payment Intent ready:', data.paymentIntentId)
+    } catch (error) {
+      console.error('Erreur Payment Intent:', error)
+      setError('Erreur lors de l\'initialisation du paiement')
     } finally {
       setLoading(false)
+      setIsCreatingPaymentIntent(false)
     }
   }
 
@@ -107,17 +173,19 @@ export default function CheckoutPage() {
     )
   }
 
-  if (!cart) {
+  if (!cart || !clientSecret) {
     return null
   }
 
   const options = {
+    clientSecret,
     appearance: {
       theme: 'stripe' as const,
       variables: {
         colorPrimary: '#0570de',
         colorBackground: '#ffffff',
         colorText: '#30313d',
+        colorTextPlaceholder: '#6b7280', // Plus foncé pour les placeholders
         colorDanger: '#df1b41',
         fontFamily: 'Inter, system-ui, sans-serif',
         spacingUnit: '4px',
@@ -145,7 +213,7 @@ export default function CheckoutPage() {
             </h2>
             
             <Elements stripe={stripePromise} options={options}>
-              <CheckoutForm cart={cart} />
+              <CheckoutForm cart={cart} clientSecret={clientSecret} paymentIntentId={paymentIntentId} />
             </Elements>
           </div>
 
