@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe, verifyWebhookSignature } from '../../../../lib/stripe'
 import { db } from '../../../../lib/db'
+import { validatePaymentAmount } from '../../../../lib/payment-validation'
+import { ensureEventIdempotence, markEventProcessed } from '../../../../lib/webhook-security'
 import Stripe from 'stripe'
 
 // POST /api/webhooks/stripe - Handle Stripe webhook events
@@ -36,17 +38,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
+    // SÉCURITÉ: Vérifier idempotence (anti-rejeu)
+    const idempotenceCheck = await ensureEventIdempotence(
+      event.id,
+      event.type,
+      event.data.object
+    )
+
+    if (!idempotenceCheck.shouldProcess) {
+      console.log('🔒 Event already processed - ignoring replay attempt')
+      return NextResponse.json({ 
+        received: true, 
+        status: 'already_processed',
+        eventId: event.id 
+      })
+    }
+
     // Log webhook event (safe data only)
     console.log('Stripe webhook received:', {
       eventId: event.id,
       type: event.type,
       created: event.created,
       livemode: event.livemode,
+      isRetry: idempotenceCheck.isRetry,
+      retryCount: idempotenceCheck.eventRecord?.retryCount || 0,
       timestamp: new Date().toISOString(),
     })
 
+    let processingSuccess = false
+    let processingError: string | undefined
+
     // Handle the event based on type
-    switch (event.type) {
+    try {
+      switch (event.type) {
       case 'payment_intent.succeeded':
         await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent)
         break
@@ -66,9 +90,44 @@ export async function POST(request: NextRequest) {
       default:
         console.log(`Unhandled event type: ${event.type}`)
         break
+      }
+      
+      processingSuccess = true
+      
+    } catch (processingErr) {
+      processingSuccess = false
+      processingError = processingErr instanceof Error ? processingErr.message : 'Unknown processing error'
+      
+      console.error('Event processing failed:', {
+        eventId: event.id,
+        eventType: event.type,
+        error: processingError,
+        retryCount: idempotenceCheck.eventRecord?.retryCount || 0
+      })
+      
+      // Ne pas throw l'erreur ici - marquer comme échec et retourner 200
+      // Stripe retentera automatiquement
     }
 
-    return NextResponse.json({ received: true })
+    // Marquer l'événement comme traité (succès ou échec)
+    await markEventProcessed(event.id, processingSuccess, processingError)
+
+    if (processingSuccess) {
+      return NextResponse.json({ 
+        received: true, 
+        status: 'processed',
+        eventId: event.id 
+      })
+    } else {
+      // Retourner 200 même en cas d'échec pour éviter les retry loops infinis
+      // L'événement sera marqué comme failed et pourra être retraité manuellement
+      return NextResponse.json({ 
+        received: true, 
+        status: 'failed',
+        eventId: event.id,
+        error: processingError 
+      })
+    }
 
   } catch (error) {
     console.error('Webhook handler error:', error)
@@ -90,6 +149,38 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       console.error('Missing cart or user ID in payment metadata')
       return
     }
+
+    // SÉCURITÉ CRITIQUE: Valider le montant avant de créer la commande
+    console.log('🔒 Validating payment amount against server calculation...')
+    
+    const validation = await validatePaymentAmount(
+      paymentIntent.amount,
+      paymentIntent.currency,
+      cartId
+    )
+
+    if (!validation.valid) {
+      // ALERTE SÉCURITÉ CRITIQUE - Tentative de fraude détectée
+      console.error('🚨 FRAUD ATTEMPT DETECTED - Payment amount mismatch:', {
+        paymentIntentId: paymentIntent.id,
+        paymentIntentAmount: paymentIntent.amount,
+        serverAmount: validation.serverAmount,
+        discrepancy: validation.discrepancy,
+        error: validation.error,
+        cartId,
+        userId,
+        timestamp: new Date().toISOString()
+      })
+
+      // Ne pas créer la commande - paiement suspendu
+      throw new Error(`Payment amount validation failed: ${validation.error}`)
+    }
+
+    console.log('✅ Payment amount validated successfully', {
+      paymentIntentId: paymentIntent.id,
+      validatedAmount: validation.serverAmount,
+      currency: paymentIntent.currency
+    })
 
     // Start database transaction to create order
     await db.$transaction(async (tx) => {

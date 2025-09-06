@@ -15,16 +15,16 @@ const path = require('path')
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000'
 
 // Helper pour simuler l'authentification test
-function getTestHeaders(userId = 'test-user-edge', email = 'edge@test.com') {
+function getTestHeaders(userId = 'test-user-edge', email = 'edge.test@testauth.local') {
   if (process.env.NODE_ENV !== 'development') {
     throw new Error('Ces tests ne peuvent être exécutés qu\'en développement')
   }
   
   return {
     'Content-Type': 'application/json',
-    'X-Test-User-Id': userId,
+    'X-Test-User-Id': `test-user-${userId}`,
     'X-Test-User-Email': email,
-    'X-Test-User-Role': 'CLIENT'
+    'X-Test-User-Role': 'USER'
   }
 }
 
@@ -57,7 +57,7 @@ async function testCartAmountChange() {
   try {
     // Panier initial (100 CAD)
     const cart1 = {
-      id: 'cart-amount-test-1',
+      id: 'cm0000000000000000000002', // CUID valide
       items: [{
         id: 'item-1',
         quantity: 1,
@@ -78,7 +78,7 @@ async function testCartAmountChange() {
     
     // Panier modifié (200 CAD)
     const cart2 = {
-      id: 'cart-amount-test-2', // Différent ID pour forcer nouveau montant
+      id: 'cm0000000000000000000003', // CUID valide - différent ID pour forcer nouveau montant
       items: [{
         id: 'item-2',
         quantity: 1,
@@ -186,7 +186,7 @@ async function testDifferentUsers() {
     // Utilisateur 1
     console.log('   📡 Utilisateur 1...')
     const user1Headers = {
-      ...getTestHeaders('user-1', 'user1@test.com'),
+      ...getTestHeaders('user-1', 'user1.test@testauth.local'),
     }
     
     const response1 = await fetch(`${BASE_URL}/api/checkout/create-payment-intent`, {
@@ -194,7 +194,7 @@ async function testDifferentUsers() {
       headers: user1Headers,
       body: JSON.stringify({
         cartId: sameCartId,
-        email: 'user1@test.com',
+        email: 'user1.test@testauth.local',
         billingAddress: {
           line1: '111 User1 Street',
           city: 'Test City',
@@ -217,7 +217,7 @@ async function testDifferentUsers() {
     // Utilisateur 2 (même panier théorique)
     console.log('   📡 Utilisateur 2...')
     const user2Headers = {
-      ...getTestHeaders('user-2', 'user2@test.com'),
+      ...getTestHeaders('user-2', 'user2.test@testauth.local'),
     }
     
     const response2 = await fetch(`${BASE_URL}/api/checkout/create-payment-intent`, {
@@ -265,7 +265,7 @@ async function testConcurrentRequests() {
   console.log('\n🧪 Test 4: Requests concurrents → 1 seul PI')
   
   try {
-    const cartId = 'concurrent-test-cart'
+    const cartId = 'cm0000000000000000000006' // CUID valide
     const numRequests = 10
     
     console.log(`   📡 ${numRequests} requests simultanés...`)

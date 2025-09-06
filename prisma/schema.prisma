@@ -435,3 +435,21 @@ model Review {
   @@index([productId])
   @@map("reviews")
 }
+
+model WebhookEvent {
+  id            String   @id @default(cuid())
+  eventId       String   @unique // Stripe event.id
+  eventType     String   // payment_intent.succeeded, etc.
+  processed     Boolean  @default(false)
+  processedAt   DateTime?
+  payloadHash   String?  // SHA256 du payload pour vérification
+  retryCount    Int      @default(0)
+  lastError     String?
+  createdAt     DateTime @default(now())
+  
+  // Index pour performance et cleanup
+  @@index([eventId])
+  @@index([eventType, processed])
+  @@index([createdAt])
+  @@map("webhook_events")
+}

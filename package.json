@@ -17,11 +17,14 @@
     "test:security-headers": "node tests/security-headers-test.js",
     "test:validation": "node tests/test-validation.js",
     "test:access-security": "node tests/test-access-security.js",
-    "test:payment-intent": "node tests/payment-intent-reuse.test.js",
-    "test:payment-edge-cases": "node tests/payment-intent-edge-cases.test.js",
+    "test:payment-intent": "NODE_ENV=development node tests/payment-intent-reuse.test.js",
+    "test:payment-edge-cases": "NODE_ENV=development node tests/payment-intent-edge-cases.test.js",
+    "test:payment-security": "NODE_ENV=development node tests/payment-amount-validation.test.js",
+    "test:webhook-security": "NODE_ENV=development node tests/webhook-security.test.js",
     "security:audit": "echo 'Use: npm run test:security-headers && open https://securityheaders.com'",
-    "security:all": "npm run test:rate-limit && npm run test:security-headers && npm run test:validation && npm run test:access-security",
-    "test:payments": "npm run test:payment-intent && npm run test:payment-edge-cases"
+    "security:all": "npm run test:rate-limit && npm run test:security-headers && npm run test:validation && npm run test:access-security && npm run test:webhook-security",
+    "test:payments": "node scripts/test-runner.js",
+    "test:payments:manual": "npm run test:payment-intent && npm run test:payment-edge-cases && npm run test:payment-security && npm run test:webhook-security"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
