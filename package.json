@@ -21,6 +21,7 @@
     "test:payment-edge-cases": "NODE_ENV=development node tests/payment-intent-edge-cases.test.js",
     "test:payment-security": "NODE_ENV=development node tests/payment-amount-validation.test.js",
     "test:webhook-security": "NODE_ENV=development node tests/webhook-security.test.js",
+    "test:payment-test-mode": "NODE_ENV=development PAYMENTS_TEST_MODE=true node tests/payment-test-mode-security.test.js",
     "security:audit": "echo 'Use: npm run test:security-headers && open https://securityheaders.com'",
     "security:all": "npm run test:rate-limit && npm run test:security-headers && npm run test:validation && npm run test:access-security && npm run test:webhook-security",
     "test:payments": "node scripts/test-runner.js",

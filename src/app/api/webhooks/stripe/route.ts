@@ -7,6 +7,7 @@ import { stripe, verifyWebhookSignature } from '../../../../lib/stripe'
 import { db } from '../../../../lib/db'
 import { validatePaymentAmount } from '../../../../lib/payment-validation'
 import { ensureEventIdempotence, markEventProcessed } from '../../../../lib/webhook-security'
+import { incrementEventTypeMetric, isCriticalEventType } from '../../../../lib/webhook-metrics'
 import Stripe from 'stripe'
 
 // POST /api/webhooks/stripe - Handle Stripe webhook events
@@ -83,12 +84,22 @@ export async function POST(request: NextRequest) {
         await handlePaymentIntentCanceled(event.data.object as Stripe.PaymentIntent)
         break
 
+      case 'payment_intent.created':
+        handlePaymentIntentCreated(event.data.object as Stripe.PaymentIntent)
+        break
+
       case 'charge.dispute.created':
         await handleChargeDisputeCreated(event.data.object as Stripe.Dispute)
         break
 
       default:
         console.log(`Unhandled event type: ${event.type}`)
+        // Log pour analytics - événements non critiques
+        console.debug('Event details:', {
+          eventId: event.id,
+          type: event.type,
+          created: event.created
+        })
         break
       }
       
@@ -102,12 +113,16 @@ export async function POST(request: NextRequest) {
         eventId: event.id,
         eventType: event.type,
         error: processingError,
-        retryCount: idempotenceCheck.eventRecord?.retryCount || 0
+        retryCount: idempotenceCheck.eventRecord?.retryCount || 0,
+        isCritical: isCriticalEventType(event.type)
       })
       
       // Ne pas throw l'erreur ici - marquer comme échec et retourner 200
       // Stripe retentera automatiquement
     }
+
+    // Mettre à jour les métriques
+    await incrementEventTypeMetric(event.type, processingSuccess)
 
     // Marquer l'événement comme traité (succès ou échec)
     await markEventProcessed(event.id, processingSuccess, processingError)
@@ -304,6 +319,22 @@ async function handlePaymentIntentCanceled(paymentIntent: Stripe.PaymentIntent) 
   })
 
   // TODO: Send notification if needed
+}
+
+// Handle PaymentIntent created (informational only)
+function handlePaymentIntentCreated(paymentIntent: Stripe.PaymentIntent) {
+  // Event informationnel - aucune action métier requise
+  // PaymentIntent.created se produit avant la confirmation de paiement
+  
+  console.debug('PaymentIntent created (info only):', {
+    paymentIntentId: paymentIntent.id,
+    amount: paymentIntent.amount,
+    currency: paymentIntent.currency,
+    status: paymentIntent.status,
+    cartId: paymentIntent.metadata.cartId || 'unknown',
+  })
+  
+  // Pas d'action nécessaire - l'important est payment_intent.succeeded
 }
 
 // Handle dispute created (chargeback)

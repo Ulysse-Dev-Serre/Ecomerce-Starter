@@ -54,11 +54,41 @@ export async function POST(request: NextRequest) {
 
     // SÉCURITÉ CRITIQUE: Recalculer le montant côté serveur (source de vérité)
     
-    // Pour les tests: utiliser données simulées si cartId commence par "cm000000"
+    // Vérifier mode test autorisé
+    const isTestModeEnabled = process.env.PAYMENTS_TEST_MODE === 'true'
+    const isTestCartId = cartId.startsWith('cm000000') || cartId.startsWith('test-')
+    
     let serverCalculation
     
-    if (cartId.startsWith('cm000000') && process.env.NODE_ENV === 'development') {
-      console.log('🧪 Test mode: Using simulated cart calculation')
+    if (isTestCartId) {
+      // Vérification sécurité: Mode test doit être explicitement activé
+      if (!isTestModeEnabled) {
+        console.error('🚨 SECURITY: Test cartId used without PAYMENTS_TEST_MODE enabled', {
+          cartId,
+          userId: session.user.id,
+          environment: process.env.NODE_ENV,
+          testModeEnabled: isTestModeEnabled,
+          timestamp: new Date().toISOString()
+        })
+        
+        return NextResponse.json({ 
+          error: 'Cart ID invalide' 
+        }, { status: 400 })
+      }
+      
+      if (process.env.NODE_ENV === 'production') {
+        console.error('🚨 CRITICAL: Test cartId attempted in production', {
+          cartId,
+          userId: session.user.id,
+          timestamp: new Date().toISOString()
+        })
+        
+        return NextResponse.json({ 
+          error: 'Configuration invalide' 
+        }, { status: 500 })
+      }
+      
+      console.log('[TEST] 🧪 Using simulated cart calculation for test cartId:', cartId)
       
       // Simulation calcul pour tests (montant fixe)
       serverCalculation = {
@@ -123,12 +153,14 @@ export async function POST(request: NextRequest) {
     if (existingPI) {
       // Reuse existing PaymentIntent
       paymentIntent = existingPI
-      console.log('Reusing existing Payment Intent:', {
+      const logPrefix = isTestCartId ? '[TEST]' : ''
+      console.log(`${logPrefix} Reusing existing Payment Intent:`, {
         paymentIntentId: existingPI.id,
         cartId: cartId,
         userId: session.user.id,
         status: existingPI.status,
         amount: stripeAmount,
+        testMode: isTestCartId,
         timestamp: new Date().toISOString(),
       })
     } else {
@@ -164,12 +196,14 @@ export async function POST(request: NextRequest) {
     })
 
       // Log successful payment intent creation (no sensitive data)
-      console.log('Payment Intent created:', {
+      const logPrefix = isTestCartId ? '[TEST]' : ''
+      console.log(`${logPrefix} Payment Intent created:`, {
         paymentIntentId: paymentIntent.id,
         amount: stripeAmount,
         currency: serverCalculation.currency,
         userId: session.user.id,
         cartId: cartId,
+        testMode: isTestCartId,
         serverCalculation: {
           subtotal: serverCalculation.subtotal,
           taxes: serverCalculation.taxes,

@@ -2,6 +2,11 @@
 
 > **Starter e-commerce complet et moderne pour créer rapidement des boutiques en ligne de qualité professionnelle.**
 
+[![Next.js](https://img.shields.io/badge/Next.js-15.5-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-6.15-2D3748?style=for-the-badge&logo=prisma)](https://prisma.io/)
+[![Stripe](https://img.shields.io/badge/Stripe-Payments-6772E5?style=for-the-badge&logo=stripe)](https://stripe.com/)
+
 ## ⚡ Démarrage rapide
 
 ```bash
@@ -134,12 +139,17 @@ POST /api/orders
 
 Détails : [`docs/VERCEL_CHECKLIST.md`](docs/VERCEL_CHECKLIST.md)
 
-## 📚 Documentation
+## 📚 Documentation complète
 
-- [`CUSTOMIZATION_GUIDE.md`](docs/CUSTOMIZATION_GUIDE.md) - Personnaliser pour votre niche
-- [`AUTH_FINAL_SETUP.md`](docs/AUTH_FINAL_SETUP.md) - Configuration authentification
-- [`EMAIL_CONFIG.md`](docs/EMAIL_CONFIG.md) - Envoi d'emails réels
-- [`CSS_ARCHITECTURE.md`](docs/CSS_ARCHITECTURE.md) - Structure CSS modulaire
+**📖 [Voir la documentation complète](docs/README.md)**
+
+**🎯 Guides essentiels :**
+- **[Quick Start](docs/1-setup/quick-start.md)** - Démarrage en 5 minutes
+- **[Configuration](docs/1-setup/env-variables.md)** - Variables d'environnement
+- **[API Documentation](docs/3-api/overview.md)** - Endpoints & exemples
+- **[Sécurité](docs/4-security/overview.md)** - Protection production
+- **[Tests](docs/5-testing/strategy.md)** - Validation automatique
+- **[Déploiement Vercel](docs/6-deployment/vercel.md)** - Production ready
 
 ## 🎯 Exemples de niches
 
