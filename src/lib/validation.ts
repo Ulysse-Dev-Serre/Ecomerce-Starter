@@ -132,9 +132,11 @@ export const ValidationSchemas = {
       state: z.string().optional(),
       postal_code: z.string().min(1, 'Code postal requis'),
       country: z.string().length(2, 'Code pays invalide'),
-    }),
+    }).optional(), // Optional since we'll update it later with real data
     saveAddress: z.boolean().default(false),
   }),
+
+
   // Produits
   createProduct: z.object({
     slug: BaseValidationSchemas.slug,

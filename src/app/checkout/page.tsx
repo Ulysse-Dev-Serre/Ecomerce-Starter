@@ -78,13 +78,6 @@ export default function CheckoutPage() {
     setIsCreatingPaymentIntent(true)
 
     try {
-      // Calculate total for default billing address
-      const subtotal = cartData.items.reduce((sum: number, item: any) =>
-      sum + (item.variant.price * item.quantity), 0
-      )
-      const taxes = subtotal * 0.15
-      const total = subtotal + taxes
-
       console.log('Creating/fetching Payment Intent for cart:', cartData.id)
 
       const response = await fetch('/api/checkout/create-payment-intent', {
@@ -95,13 +88,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           cartId: cartData.id,
           email: session?.user?.email || '',
-          billingAddress: {
-            line1: '123 Rue temporaire',
-            city: 'Montréal',
-            state: 'QC',
-            postal_code: 'H3H 2T4',
-            country: 'CA',
-          },
+          // No billingAddress - will be updated later with real data from form
         }),
       })
 
@@ -197,26 +184,19 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Finaliser la commande</h1>
-          <p className="mt-2 text-gray-600">
-            Saisissez vos informations de paiement pour finaliser votre commande.
-          </p>
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-semibold text-gray-900">Paiement sécurisé</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Formulaire de paiement */}
+          {/* Payment Form - Left Column */}
           <div className="bg-white rounded-lg shadow-sm p-6 lg:p-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">
-              Informations de paiement
-            </h2>
-            
             <Elements stripe={stripePromise} options={options}>
               <CheckoutForm cart={cart} clientSecret={clientSecret} paymentIntentId={paymentIntentId} />
             </Elements>
           </div>
 
-          {/* Récapitulatif commande */}
+          {/* Order Summary - Right Column */}
           <div className="bg-white rounded-lg shadow-sm p-6 lg:p-8">
             <OrderSummary cart={cart} />
           </div>

@@ -21,7 +21,7 @@ const CreatePaymentIntentSchema = z.object({
     state: z.string().optional(),
     postal_code: z.string().min(1, 'Code postal requis'),
     country: z.string().length(2, 'Code pays invalide'),
-  }),
+  }).optional(), // Optional since we'll update it later with real data
   saveAddress: z.boolean().default(false),
 })
 
@@ -120,11 +120,17 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Production: calcul réel depuis DB
-      const calculationResult = await calculateCartTotal(cartId, billingAddress)
-      
+      // Si pas d'adresse fournie, utiliser une adresse par défaut pour le calcul initial
+      const addressForCalculation = billingAddress || {
+        country: 'CA',
+        state: 'QC'
+      }
+
+      const calculationResult = await calculateCartTotal(cartId, addressForCalculation)
+
       if (calculationResult.error || !calculationResult.data) {
-        return NextResponse.json({ 
-          error: calculationResult.error || 'Erreur lors du calcul du montant' 
+        return NextResponse.json({
+          error: calculationResult.error || 'Erreur lors du calcul du montant'
         }, { status: 400 })
       }
 
@@ -179,17 +185,20 @@ export async function POST(request: NextRequest) {
         total: totalAmount.toString(),
         calculationVersion: '1.0', // Pour audit trail
       },
-      shipping: {
-        address: {
-          line1: billingAddress.line1,
-          line2: billingAddress.line2 || undefined,
-          city: billingAddress.city,
-          state: billingAddress.state || undefined,
-          postal_code: billingAddress.postal_code,
-          country: billingAddress.country,
-        },
-        name: session.user.name || 'Client',
-      },
+      // Only set shipping if billingAddress is provided (for backward compatibility)
+      ...(billingAddress && {
+        shipping: {
+          address: {
+            line1: billingAddress.line1,
+            line2: billingAddress.line2 || undefined,
+            city: billingAddress.city,
+            state: billingAddress.state || undefined,
+            postal_code: billingAddress.postal_code,
+            country: billingAddress.country,
+          },
+          name: session.user.name || 'Client',
+        }
+      }),
       automatic_payment_methods: {
         enabled: true,
       },
@@ -214,8 +223,8 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Save address to user profile if requested
-    if (saveAddress) {
+    // Save address to user profile if requested and address is provided
+    if (saveAddress && billingAddress) {
       await db.address.create({
         data: {
           userId: session.user.id,

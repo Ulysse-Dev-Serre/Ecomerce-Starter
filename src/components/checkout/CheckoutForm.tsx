@@ -86,11 +86,23 @@ export default function CheckoutForm({ cart, clientSecret: providedClientSecret,
       }
 
       // Confirm payment with existing Payment Intent
-      // Email will be automatically collected by PaymentElement and used for receipt
+      // Pass addresses directly in the confirmation
       const { error: confirmError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/checkout/success?payment_intent=${providedPaymentIntentId}`,
+          shipping: {
+            name: session?.user?.name || 'Client',
+            address: {
+              line1: addressData.line1,
+              line2: addressData.line2 || undefined,
+              city: addressData.city,
+              state: addressData.state || undefined,
+              postal_code: addressData.postal_code,
+              country: addressData.country,
+            },
+          },
+          // Billing details will be collected automatically by PaymentElement
         },
       })
 
@@ -172,37 +184,12 @@ export default function CheckoutForm({ cart, clientSecret: providedClientSecret,
         </div>
       </div>
 
-      {/* Error message */}
+      {/* Error message - simplified */}
       {errorMessage && (
         <div className="bg-red-50 border border-red-200 rounded-md p-3">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">{errorMessage}</p>
-            </div>
-          </div>
+          <p className="text-sm text-red-700">{errorMessage}</p>
         </div>
       )}
-
-      {/* Security notice */}
-      <div className="bg-green-50 border border-green-200 rounded-md p-3">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="ml-3">
-            <p className="text-sm text-green-700">
-              <span className="font-medium">Paiement sécurisé</span> - Vos données sont protégées par le cryptage SSL 256-bit et Stripe (certifié PCI DSS).
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* Submit button */}
       <button
