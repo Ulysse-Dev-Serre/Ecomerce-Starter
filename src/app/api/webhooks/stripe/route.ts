@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log webhook event (safe data only)
-    console.log('Stripe webhook received:', {
+    console.log('🔄 STRIPE WEBHOOK RECEIVED:', {
       eventId: event.id,
       type: event.type,
       created: event.created,
@@ -220,7 +220,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         data: {
           userId: userId,
           status: 'PAID',
-          totalAmount: parseFloat(paymentIntent.metadata.total || '0'),
+          totalAmount: paymentIntent.amount / 100, // Convert from cents to dollars
           currency: paymentIntent.currency.toUpperCase(),
           shippingAddress: paymentIntent.shipping?.address ? JSON.stringify(paymentIntent.shipping.address) : '{}',
           billingAddress: paymentIntent.shipping?.address ? JSON.stringify(paymentIntent.shipping.address) : '{}',
@@ -258,7 +258,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       await tx.payment.create({
         data: {
           orderId: order.id,
-          amount: parseFloat(paymentIntent.metadata.total || '0'),
+          amount: paymentIntent.amount / 100, // Convert from cents to dollars
           currency: paymentIntent.currency.toUpperCase(),
           method: 'STRIPE',
           status: 'COMPLETED',
@@ -276,11 +276,15 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
         data: { status: 'CONVERTED' }
       })
 
-      console.log('Order created successfully:', {
+      console.log('✅ ORDER CREATED SUCCESSFULLY:', {
         orderId: order.id,
         paymentIntentId: paymentIntent.id,
         amount: paymentIntent.amount,
         userId: userId,
+        totalAmount: order.totalAmount,
+        currency: order.currency,
+        status: order.status,
+        timestamp: new Date().toISOString()
       })
     })
 
@@ -331,15 +335,15 @@ async function handlePaymentIntentCanceled(paymentIntent: Stripe.PaymentIntent) 
 function handlePaymentIntentCreated(paymentIntent: Stripe.PaymentIntent) {
   // Event informationnel - aucune action métier requise
   // PaymentIntent.created se produit avant la confirmation de paiement
-  
-  console.debug('PaymentIntent created (info only):', {
+
+  console.log('PaymentIntent created (info):', {
     paymentIntentId: paymentIntent.id,
     amount: paymentIntent.amount,
     currency: paymentIntent.currency,
     status: paymentIntent.status,
     cartId: paymentIntent.metadata.cartId || 'unknown',
   })
-  
+
   // Pas d'action nécessaire - l'important est payment_intent.succeeded
 }
 

@@ -39,6 +39,7 @@ export default function CartPage() {
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(true)
   const [processingItem, setProcessingItem] = useState<string | null>(null)
+  const [localQuantities, setLocalQuantities] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -53,6 +54,15 @@ export default function CartPage() {
       const response = await fetch(`/api/cart/${session?.user?.id}`)
       const data = await response.json()
       setCart(data.data)
+
+      // Initialize local quantities with server data
+      if (data.data?.items) {
+        const quantities: Record<string, number> = {}
+        data.data.items.forEach((item: CartItem) => {
+          quantities[item.id] = item.quantity
+        })
+        setLocalQuantities(quantities)
+      }
     } catch (error) {
       console.error('Erreur chargement panier:', error)
     } finally {
@@ -60,21 +70,50 @@ export default function CartPage() {
     }
   }
 
-  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
+  const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
       handleRemoveItem(itemId)
       return
     }
 
-    setProcessingItem(itemId)
-    const success = await updateQuantity(itemId, newQuantity)
-    
-    if (success) {
-      fetchCart() // Refresh local cart data
-    } else {
-      alert('Erreur lors de la modification de la quantité')
+    // Update local quantity immediately for better UX
+    setLocalQuantities(prev => ({
+      ...prev,
+      [itemId]: newQuantity
+    }))
+  }
+
+  const handleBatchUpdateQuantities = async () => {
+    if (!cart?.items) return true
+
+    setProcessingItem('batch-update')
+
+    try {
+      // Update all quantities that have changed
+      const updatePromises = cart.items.map(async (item) => {
+        const localQuantity = localQuantities[item.id]
+        if (localQuantity && localQuantity !== item.quantity) {
+          return updateQuantity(item.id, localQuantity)
+        }
+        return true
+      })
+
+      const results = await Promise.all(updatePromises)
+      const allSuccessful = results.every(result => result === true)
+
+      if (!allSuccessful) {
+        alert('Erreur lors de la mise à jour de certaines quantités')
+        return false
+      }
+
+      return true
+    } catch (error) {
+      console.error('Erreur batch update:', error)
+      alert('Erreur lors de la mise à jour des quantités')
+      return false
+    } finally {
+      setProcessingItem(null)
     }
-    setProcessingItem(null)
   }
 
   const handleRemoveItem = async (itemId: string) => {
@@ -93,9 +132,10 @@ export default function CartPage() {
     setProcessingItem(null)
   }
 
-  const total = cart?.items.reduce((sum, item) => 
-    sum + (parseFloat(item.variant?.price || '0') * item.quantity), 0
-  ) || 0
+  const total = cart?.items.reduce((sum, item) => {
+    const quantity = localQuantities[item.id] || item.quantity
+    return sum + (parseFloat(item.variant?.price || '0') * quantity)
+  }, 0) || 0
 
   if (!session) {
     return (
@@ -196,20 +236,19 @@ export default function CartPage() {
                       </div>
                       
                       <div className="flex items-center space-x-3">
-                        <button 
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
-                          disabled={item.quantity <= 1 || processingItem === item.id}
+                        <button
+                          onClick={() => handleUpdateQuantity(item.id, (localQuantities[item.id] || item.quantity) - 1)}
+                          className="w-8 h-8 rounded-full border border-gray-400 flex items-center justify-center text-gray-800 hover:bg-gray-200 disabled:opacity-50"
+                          disabled={(localQuantities[item.id] || item.quantity) <= 1}
                         >
                           -
                         </button>
-                        <span className="text-lg font-medium w-8 text-center">
-                          {item.quantity}
+                        <span className="text-lg font-medium w-8 text-center text-gray-900">
+                          {localQuantities[item.id] || item.quantity}
                         </span>
-                        <button 
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
-                          disabled={processingItem === item.id}
+                        <button
+                          onClick={() => handleUpdateQuantity(item.id, (localQuantities[item.id] || item.quantity) + 1)}
+                          className="w-8 h-8 rounded-full border border-gray-400 flex items-center justify-center text-gray-800 hover:bg-gray-200 disabled:opacity-50"
                         >
                           +
                         </button>
@@ -243,12 +282,12 @@ export default function CartPage() {
                   
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Sous-total</span>
-                      <span className="font-medium">{total.toFixed(2)} CAD</span>
+                      <span className="text-gray-900">Sous-total</span>
+                      <span className="font-medium text-gray-900">{total.toFixed(2)} CAD</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Livraison</span>
-                      <span className="font-medium">
+                      <span className="text-gray-900">Livraison</span>
+                      <span className="font-medium text-gray-900">
                         {total >= 75 ? 'Gratuite' : '9.99 CAD'}
                       </span>
                     </div>
@@ -258,19 +297,25 @@ export default function CartPage() {
                       </div>
                     )}
                     <div className="border-t pt-3 flex justify-between text-lg font-bold">
-                      <span>Total</span>
+                      <span className="text-gray-900">Total</span>
                       <span className="text-blue-600">
                         {(total + (total >= 75 ? 0 : 9.99)).toFixed(2)} CAD
                       </span>
                     </div>
                   </div>
                   
-                  <Link 
-                    href="/checkout"
-                    className="block w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
+                  <button
+                    onClick={async () => {
+                      const success = await handleBatchUpdateQuantities()
+                      if (success) {
+                        window.location.href = '/checkout'
+                      }
+                    }}
+                    disabled={processingItem === 'batch-update'}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Procéder au paiement
-                  </Link>
+                    {processingItem === 'batch-update' ? 'Mise à jour...' : 'Procéder au paiement'}
+                  </button>
                   
                   <Link 
                     href="/shop"

@@ -42,7 +42,7 @@ export default function CheckoutForm({ cart, clientSecret: providedClientSecret,
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [email, setEmail] = useState(session?.user?.email || '')
-  const [saveAddress, setSaveAddress] = useState(true)
+
 
   // Calculate total
   const total = cart.items.reduce((sum, item) => 
@@ -71,7 +71,7 @@ export default function CheckoutForm({ cart, clientSecret: providedClientSecret,
       // Get address data from AddressElement
       const addressElement = elements.getElement('address')
       let addressData = null
-      
+
       if (addressElement) {
         const { complete, value } = await addressElement.getValue()
         if (complete) {
@@ -86,11 +86,11 @@ export default function CheckoutForm({ cart, clientSecret: providedClientSecret,
       }
 
       // Confirm payment with existing Payment Intent
+      // Email will be automatically collected by PaymentElement and used for receipt
       const { error: confirmError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/checkout/success?payment_intent=${providedPaymentIntentId}`,
-          receipt_email: email,
         },
       })
 
@@ -111,56 +111,24 @@ export default function CheckoutForm({ cart, clientSecret: providedClientSecret,
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Email */}
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-          Adresse email
-        </label>
-        <input
-          type="email"
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-        />
-      </div>
-
       {/* Address Element */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Adresse de facturation
         </label>
         <div className="border border-gray-300 rounded-md p-3">
-          <AddressElement 
+          <AddressElement
             options={{
               mode: 'billing',
               allowedCountries: ['CA', 'US'],
               blockPoBox: true,
-              fields: {
-                phone: 'always',
-              },
-              validation: {
-                phone: {
-                  required: 'never',
-                },
+              display: {
+                name: 'full',
               },
             }}
           />
         </div>
-        <div className="mt-2">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={saveAddress}
-              onChange={(e) => setSaveAddress(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <span className="ml-2 text-sm text-gray-600">
-              Sauvegarder cette adresse pour mes prochaines commandes
-            </span>
-          </label>
-        </div>
+
       </div>
 
       {/* Payment Element */}
@@ -169,14 +137,36 @@ export default function CheckoutForm({ cart, clientSecret: providedClientSecret,
           Informations de paiement
         </label>
         <div className="border border-gray-300 rounded-md p-3">
-          <PaymentElement 
+          <style jsx>{`
+            .p-LinkOptInWrapper,
+            .FadeWrapper,
+            [class*="LinkOptIn"],
+            [class*="p-Link"] {
+              display: none !important;
+            }
+          `}</style>
+          <PaymentElement
             options={{
               layout: 'tabs',
-              defaultValues: {
+              paymentMethodOrder: ['card'],
+              wallets: {
+                applePay: 'never',
+                googlePay: 'never',
+              },
+              fields: {
                 billingDetails: {
-                  email: email,
-                }
-              }
+                  name: 'never',
+                  email: 'auto',
+                  phone: 'never',
+                  address: 'never',
+                },
+              },
+              business: {
+                name: 'Votre Boutique',
+              },
+              terms: {
+                card: 'never',
+              },
             }}
           />
         </div>

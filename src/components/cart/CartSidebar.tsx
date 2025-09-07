@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface CartItem {
   id: string
@@ -17,12 +17,36 @@ interface CartSidebarProps {
   items?: CartItem[]
 }
 
-export default function CartSidebar({ 
-  isOpen, 
-  onClose, 
-  items = [] 
+export default function CartSidebar({
+  isOpen,
+  onClose,
+  items = []
 }: CartSidebarProps) {
-  const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  const [localQuantities, setLocalQuantities] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    // Initialize local quantities when items change
+    const quantities: Record<string, number> = {}
+    items.forEach((item) => {
+      quantities[item.id] = item.quantity
+    })
+    setLocalQuantities(quantities)
+  }, [items])
+
+  const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
+    if (newQuantity <= 0) return
+
+    // Update local quantity immediately for better UX
+    setLocalQuantities(prev => ({
+      ...prev,
+      [itemId]: newQuantity
+    }))
+  }
+
+  const total = items.reduce((sum, item) => {
+    const quantity = localQuantities[item.id] || item.quantity
+    return sum + (item.price * quantity)
+  }, 0)
 
   return (
     <>
@@ -81,13 +105,20 @@ export default function CartSidebar({
                       {item.price.toFixed(2)} {item.currency}
                     </p>
                     <div className="flex items-center space-x-2 mt-2">
-                      <button className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100">
+                      <button
+                        onClick={() => handleUpdateQuantity(item.id, (localQuantities[item.id] || item.quantity) - 1)}
+                        className="w-8 h-8 rounded-full border border-gray-400 flex items-center justify-center text-gray-800 hover:bg-gray-200"
+                        disabled={(localQuantities[item.id] || item.quantity) <= 1}
+                      >
                         -
                       </button>
-                      <span className="text-sm font-medium w-8 text-center">
-                        {item.quantity}
+                      <span className="text-sm font-medium w-8 text-center text-gray-900">
+                        {localQuantities[item.id] || item.quantity}
                       </span>
-                      <button className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100">
+                      <button
+                        onClick={() => handleUpdateQuantity(item.id, (localQuantities[item.id] || item.quantity) + 1)}
+                        className="w-8 h-8 rounded-full border border-gray-400 flex items-center justify-center text-gray-800 hover:bg-gray-200"
+                      >
                         +
                       </button>
                     </div>

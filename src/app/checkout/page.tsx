@@ -102,7 +102,6 @@ export default function CheckoutPage() {
             postal_code: 'H3H 2T4',
             country: 'CA',
           },
-          saveAddress: false,
         }),
       })
 
