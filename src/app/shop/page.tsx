@@ -122,11 +122,11 @@ export default function ShopPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {products.map((product) => (
                 <div key={product.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                  <Link href={`/products/${product.id}`}>
+                  <Link href={`/shop/${product.id}`}>
                     <div className="aspect-square bg-gray-200 flex items-center justify-center cursor-pointer">
                       {product.variants[0]?.media[0] ? (
-                        <img 
-                          src={product.variants[0].media[0].url} 
+                        <img
+                          src={product.variants[0].media[0].url}
                           alt={product.variants[0].media[0].alt}
                           className="w-full h-full object-cover hover:scale-105 transition-transform"
                         />
@@ -135,9 +135,9 @@ export default function ShopPage() {
                       )}
                     </div>
                   </Link>
-                  
+
                   <div className="p-6">
-                    <Link href={`/products/${product.id}`}>
+                    <Link href={`/shop/${product.id}`}>
                       <h3 className="font-semibold text-gray-900 mb-2 text-lg hover:text-blue-600 cursor-pointer transition-colors">
                         {product.translations[0]?.name || 'Produit'}
                       </h3>
@@ -145,10 +145,10 @@ export default function ShopPage() {
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                       {product.translations[0]?.description || 'Description non disponible'}
                     </p>
-                    
+
                     <div className="flex justify-between items-center mb-4">
-                      <Link 
-                        href={`/products/${product.id}`}
+                      <Link
+                        href={`/shop/${product.id}`}
                         className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
                         Voir les détails →

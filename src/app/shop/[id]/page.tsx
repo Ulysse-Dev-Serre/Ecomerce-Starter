@@ -99,18 +99,18 @@ export default function ProductDetailPage() {
     }
 
     setAddingToCart(true)
-    
+
     const success = await addToCartContext(selectedVariant, quantity)
-    
+
     if (success) {
-      setToast({ 
-        message: `${quantity} ${product?.translations[0]?.name || 'produit'}(s) ajouté(s) au panier !`, 
-        type: 'success' 
+      setToast({
+        message: `${quantity} ${product?.translations[0]?.name || 'produit'}(s) ajouté(s) au panier !`,
+        type: 'success'
       })
     } else {
       setToast({ message: 'Erreur lors de l\'ajout au panier', type: 'error' })
     }
-    
+
     setAddingToCart(false)
   }
 
@@ -140,7 +140,7 @@ export default function ProductDetailPage() {
             <div className="text-red-500 text-6xl mb-4">❌</div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Produit non trouvé</h1>
             <p className="text-gray-600 mb-6">{error}</p>
-            <Link 
+            <Link
               href="/shop"
               className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -156,7 +156,7 @@ export default function ProductDetailPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      
+
       <main className="flex-1 py-8">
         <div className="container mx-auto px-4">
           {/* Breadcrumb */}
@@ -188,11 +188,11 @@ export default function ProductDetailPage() {
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
                   {product.translations[0]?.name || 'Produit sans nom'}
                 </h1>
-                
+
                 {product.categories.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-4">
                     {product.categories.map((category) => (
-                      <span 
+                      <span
                         key={category.id}
                         className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
                       >
@@ -222,11 +222,11 @@ export default function ProductDetailPage() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">Variantes disponibles</h3>
                   <div className="grid grid-cols-1 gap-3">
                     {product.variants.map((variant) => (
-                      <div 
+                      <div
                         key={variant.id}
                         className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                          selectedVariant === variant.id 
-                            ? 'border-blue-600 bg-blue-50' 
+                          selectedVariant === variant.id
+                            ? 'border-blue-600 bg-blue-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                         onClick={() => setSelectedVariant(variant.id)}
@@ -246,9 +246,9 @@ export default function ProductDetailPage() {
                             </div>
                           </div>
                           <div className={`text-sm px-2 py-1 rounded ${
-                            variant.stock > 10 
-                              ? 'bg-green-100 text-green-800' 
-                              : variant.stock > 0 
+                            variant.stock > 10
+                              ? 'bg-green-100 text-green-800'
+                              : variant.stock > 0
                               ? 'bg-yellow-100 text-yellow-800'
                               : 'bg-red-100 text-red-800'
                           }`}>
@@ -343,10 +343,10 @@ export default function ProductDetailPage() {
       </main>
 
       <Footer />
-      
+
       {/* Toast Notifications */}
       {toast && (
-        <Toast 
+        <Toast
           message={toast.message}
           type={toast.type}
           onClose={() => setToast(null)}

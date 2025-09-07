@@ -37,14 +37,15 @@ export default function Footer({
             <h4 className="font-semibold mb-4">Navigation</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/products" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/shop" className="text-gray-400 hover:text-white transition-colors">
                   Produits
                 </Link>
               </li>
               <li>
-                <Link href="/categories" className="text-gray-400 hover:text-white transition-colors">
-                  Catégories
-                </Link>
+                {/* Catégories - Backend disponible, implémentation frontend à faire plus tard si nécessaire */}
+                <span className="text-gray-500 cursor-not-allowed" title="Backend disponible - Implémentation frontend à faire plus tard">
+                  Catégories (backend disponible)
+                </span>
               </li>
               <li>
                 <Link href="/about" className="text-gray-400 hover:text-white transition-colors">

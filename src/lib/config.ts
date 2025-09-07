@@ -48,7 +48,7 @@ export const formatPrice = (amount: number, currency: string) => {
 }
 
 // URL helpers
-export const getProductUrl = (slug: string) => `/products/${slug}`
+export const getProductUrl = (slug: string) => `/shop/${slug}`
 export const getCategoryUrl = (slug: string) => `/categories/${slug}`
 export const getImageUrl = (path: string) => path.startsWith('http') ? path : `/images/${path}`
 
