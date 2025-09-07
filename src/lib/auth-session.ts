@@ -159,5 +159,23 @@ export const authOptions: NextAuthOptions = {
 }
 
 export async function getAuthSession() {
+  // Support pour tests automatisés en développement
+  if (process.env.NODE_ENV === 'development') {
+    const testUserId = process.env.TEST_USER_ID
+    const testUserEmail = process.env.TEST_USER_EMAIL  
+    const testUserRole = process.env.TEST_USER_ROLE
+    
+    if (testUserId && testUserEmail) {
+      return {
+        user: {
+          id: testUserId,
+          email: testUserEmail,
+          name: testUserEmail.split('@')[0],
+          role: testUserRole || 'CLIENT'
+        }
+      }
+    }
+  }
+  
   return await getServerSession(authOptions)
 }
