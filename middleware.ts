@@ -40,6 +40,11 @@ export async function middleware(request: NextRequest) {
   // Appliquer les en-têtes de sécurité
   const securityHeaders = getSecurityHeaders(defaultSecurityConfig)
   
+  // DEBUG: Vérifier que les headers sont générés
+  if (process.env.NODE_ENV === 'development' && Object.keys(securityHeaders).length > 0) {
+    console.log('[DEBUG] Security headers generated:', Object.keys(securityHeaders))
+  }
+  
   Object.entries(securityHeaders).forEach(([key, value]) => {
     response.headers.set(key, value)
   })

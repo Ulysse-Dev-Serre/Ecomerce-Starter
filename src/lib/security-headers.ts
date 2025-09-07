@@ -55,7 +55,7 @@ export function getSecurityHeaders(config: SecurityHeadersConfig): Record<string
     headers['Content-Security-Policy'] = cspDirectives.join('; ')
   }
   
-  // HTTP Strict Transport Security (HSTS)
+  // HTTP Strict Transport Security (HSTS) - Production uniquement
   if (config.enableHSTS && !config.isDevelopment) {
     // 6 mois minimum + includeSubdomains + preload
     headers['Strict-Transport-Security'] = 'max-age=15768000; includeSubDomains; preload'
